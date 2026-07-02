@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /students/{studentEmail} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == studentEmail;
+    }
+    // 그 외 모든 문서는 기본적으로 차단
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

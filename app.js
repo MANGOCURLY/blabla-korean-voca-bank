@@ -16,7 +16,7 @@ const IMG = {
 };
 
 /* =====================================================================
-   Blabla Korean · Vocab Bank — mockup logic
+   Blabla Korean · Voca Bank — mockup logic
    - 다국어 UI (fr / en)
    - 구글 로그인 자리 (지금은 데모: 학생 선택)
    - 날짜별 단어 보기 / 랜덤 연습 / 머니뱅크 / 아는단어·마스터 / 복습
@@ -62,7 +62,14 @@ const T = {
       ["⭐","Mots connus","3 bonnes réponses de suite = mot connu. Continue de le revoir pour le maîtriser."],
       ["🧠","Révision espacée","Chaque jour, on te ressort les mots au bon moment : 1, 3, 7, 14 puis 30 jours."],
     ],
-    switchLang:"English"
+    switchLang:"English",
+    newTag: "Nouveau", sentenceTag: "Phrase",
+    share: "Partager le résultat",
+    logout: "Se déconnecter",
+    logoutConfirm: "Tu veux vraiment te déconnecter ?",
+    notRegistered: "Tu n'es pas dans la liste des élèves. Contacte Blabla Korean.",
+    vocabLoading: "Chargement de tes mots…",
+    vocabNotReady: "Ta liste de mots n'est pas encore prête. Contacte ton professeur."
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
@@ -102,7 +109,14 @@ const T = {
       ["⭐","Known words","3 correct in a row = a known word. Keep reviewing to master it."],
       ["🧠","Spaced review","Each day we resurface words at the right time: 1, 3, 7, 14, then 30 days."],
     ],
-    switchLang:"Français"
+    switchLang:"Français",
+    newTag: "New", sentenceTag: "Sentence",
+    share: "Share result",
+    logout: "Log out",
+    logoutConfirm: "Are you sure you want to log out?",
+    notRegistered: "You're not on the registered student list. Please contact Blabla Korean.",
+    vocabLoading: "Loading your words…",
+    vocabNotReady: "Your word list isn't ready yet. Please contact your teacher."
   }
 };
 
@@ -171,8 +185,74 @@ let L = T.fr;         // current language pack
 let session = null;   // active quiz session
 let bank = 0;
 let bestStreak = 0;
+let currentUserEmail = null; // Firebase 로그인 이메일 (데모 모드면 null)
+let studentWhitelist = [];   // 구글시트에서 불러온 {email,name,lang,sheetTab}[]
 
 const REWARD = 100, PENALTY = 50, KNOWN_STREAK = 3;
+
+/* ---------- 학생 화이트리스트 (구글시트 CSV) ---------- */
+const STUDENT_LIST_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQlA-RFhG7AZj-_VjZYya9o_VfZv5i4RrIKuOOy_lhRPXOXnspSPEYjjSUP8n84FObqUZlmf-ngI-iQ/pub?gid=424226246&single=true&output=csv";
+
+// 콤마가 포함된 필드("...")도 안전하게 처리하는 CSV 한 줄 파서
+function parseCsvLine(line){
+  const result = [];
+  let cur = '', inQuotes = false;
+  for(let i=0;i<line.length;i++){
+    const c = line[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(line[i+1] === '"'){ cur += '"'; i++; }
+        else inQuotes = false;
+      } else cur += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ result.push(cur); cur=''; }
+      else cur += c;
+    }
+  }
+  result.push(cur);
+  return result.map(s=>s.trim());
+}
+
+async function fetchStudentWhitelist(){
+  const res = await fetch(STUDENT_LIST_CSV_URL);
+  const text = await res.text();
+  const lines = text.trim().split(/\r?\n/);
+  return lines.slice(1).map(parseCsvLine).map(cols=>{
+    const [email,name,lang,sheetTab,vocabCsvUrl] = cols;
+    return {email,name,lang,sheetTab,vocabCsvUrl};
+  }).filter(r=>r.email);
+}
+
+/* ---------- 학생별 단어 CSV (구글시트) ---------- */
+const vocabCache = {}; // 세션 동안만 유지, 새로고침하면 다시 fetch
+
+async function fetchStudentVocab(url){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('단어 CSV fetch 실패: HTTP '+res.status);
+  const text = await res.text();
+  const lines = text.trim().split(/\r?\n/).slice(1); // 헤더(날짜,한국어,발음,뜻,예문,예문뜻,카테고리,품사,타입) 제거
+  const words = [];
+  lines.forEach(line=>{
+    if(!line.trim()) return; // 빈 줄 건너뛰기
+    const cols = parseCsvLine(line);
+    if(cols.length < 9) return; // 컬럼 개수 안 맞으면 건너뛰기
+    const [date, ko, pron, mean, example, exampleMean, category, pos, type] = cols;
+    if(!ko || !mean) return; // 핵심 필드 비어있으면 건너뛰기
+    if(type !== 'word' && type !== 'sentence') return; // 타입 값 이상하면 건너뛰기
+    words.push({date, ko, pron, mean, example, exampleMean, category, pos, type});
+  });
+  return words;
+}
+
+async function getStudentVocab(row){
+  if(!row.vocabCsvUrl) throw new Error('vocabCsvUrl 없음');
+  if(vocabCache[row.vocabCsvUrl]) return vocabCache[row.vocabCsvUrl];
+  const words = await fetchStudentVocab(row.vocabCsvUrl);
+  if(words.length === 0) throw new Error('단어 0개');
+  vocabCache[row.vocabCsvUrl] = words;
+  return words;
+}
 const app = document.getElementById('app');
 const botnav = document.getElementById('botnav');
 const fb = document.getElementById('feedback');
@@ -182,15 +262,127 @@ const $ = (sel,el=document)=>el.querySelector(sel);
 const shuffle = a => a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
 const wonFmt = n => "₩"+n.toLocaleString('ko-KR');
 
-function loadStudent(key){
+function loadStudent(key, langOverride){
   const s = SAMPLE[key];
+  const lang = langOverride || s.lang;
   student = {
-    name:s.name, lang:s.lang,
+    name:s.name, lang,
     words: s.words.map((w,i)=>({...w, id:i, correctStreak:0, seen:0, totalCorrect:0, status:"new"}))
   };
-  L = T[s.lang];
+  L = T[lang];
   bank = 0; bestStreak = 0;
-  document.documentElement.lang = s.lang;
+  document.documentElement.lang = lang;
+}
+
+/* ---------- 실제 학생: 구글시트에서 받아온 단어로 세팅 ---------- */
+function setupStudent(row, words, lang){
+  student = {
+    name: row.name, lang,
+    words: words.map((w,i)=>({...w, id:i, correctStreak:0, seen:0, totalCorrect:0, status:"new"}))
+  };
+  L = T[lang] || T.fr;
+  bank = 0; bestStreak = 0;
+  document.documentElement.lang = lang;
+}
+
+function renderVocabLoading(lang){
+  botnav.classList.add('hidden');
+  app.innerHTML = `<div class="login">
+    <img src="${IMG.study}" alt="">
+    <p style="margin-top:18px">${(T[lang]||T.fr).vocabLoading}</p>
+  </div>`;
+}
+
+function renderVocabNotReady(lang){
+  botnav.classList.add('hidden');
+  app.innerHTML = `<div class="login">
+    <img src="${IMG.grumpy}" alt="">
+    <p style="margin-top:18px;max-width:320px">${(T[lang]||T.fr).vocabNotReady}</p>
+    <button class="btn secondary" id="backToLoginBtn" style="margin-top:20px;max-width:240px">←</button>
+  </div>`;
+  $('#backToLoginBtn').onclick = ()=>{
+    currentUserEmail = null;
+    window.fb.signOut(window.fb.auth).catch(e=>console.error(e));
+  };
+}
+
+/* ---------- Firestore: 포인트/SRS 진도 복원 & 저장 ---------- */
+async function restoreProgress(email){
+  const ref = window.fb.doc(window.fb.db, 'students', email);
+  const snap = await window.fb.getDoc(ref);
+  if(snap.exists()){
+    const data = snap.data();
+    bank = typeof data.points === 'number' ? data.points : 0;
+    const srs = data.srsProgress || {};
+    student.words.forEach(w=>{
+      const p = srs[w.ko];
+      if(p){
+        w.correctStreak = p.correctStreak||0;
+        w.totalCorrect = p.totalCorrect||0;
+        w.seen = p.seen||0;
+        w.status = p.status||"new";
+      }
+    });
+  } else {
+    bank = 0;
+    await window.fb.setDoc(ref, {points:0, srsProgress:{}, lastUpdated: window.fb.serverTimestamp()});
+  }
+}
+
+function persistProgress(){
+  if(!currentUserEmail) return; // 데모 모드는 저장 안 함
+  const srsProgress = {};
+  student.words.forEach(w=>{
+    srsProgress[w.ko] = {correctStreak:w.correctStreak, totalCorrect:w.totalCorrect, seen:w.seen, status:w.status};
+  });
+  const ref = window.fb.doc(window.fb.db, 'students', currentUserEmail);
+  window.fb.updateDoc(ref, {points: bank, srsProgress, lastUpdated: window.fb.serverTimestamp()})
+    .catch(e=>console.error('Firestore 저장 실패', e));
+}
+
+/* ---------- 로그인 성공 처리 (Google) ---------- */
+async function handleLoginSuccess(email){
+  const row = studentWhitelist.find(r=>r.email.toLowerCase()===email.toLowerCase());
+  if(!row){
+    alert(L.notRegistered);
+    currentUserEmail = null;
+    await window.fb.signOut(window.fb.auth);
+    return;
+  }
+  currentUserEmail = email;
+  const lang = (row.lang||'fr').toLowerCase();
+  renderVocabLoading(lang);
+  try{
+    const words = await getStudentVocab(row);
+    setupStudent(row, words, lang);
+    await restoreProgress(email);
+    renderHome();
+  } catch(e){
+    console.error('단어 데이터 로딩 실패', e);
+    renderVocabNotReady(lang);
+  }
+}
+
+/* ---------- 로그아웃 ---------- */
+async function doLogout(){
+  if(!confirm(L.logoutConfirm)) return;
+  const hadUser = !!currentUserEmail;
+  currentUserEmail = null;
+  if(hadUser){
+    try{ await window.fb.signOut(window.fb.auth); } catch(e){ console.error(e); }
+    // onAuthStateChanged가 renderLogin() 처리
+  } else {
+    renderLogin();
+  }
+}
+
+/* ---------- 앱 시작 (Firebase 준비된 뒤) ---------- */
+async function initApp(){
+  studentWhitelist = await fetchStudentWhitelist().catch(e=>{ console.error('학생목록 로딩 실패', e); return []; });
+  window.fb.onAuthStateChanged(window.fb.auth, user=>{
+    if(user && user.email) handleLoginSuccess(user.email);
+    else { currentUserEmail = null; renderLogin(); }
+  });
 }
 
 /* ---------- 머니뱅크 표시 ---------- */
@@ -210,11 +402,20 @@ function updateBank(delta){
   }
 }
 
+/* ---------- 뒤로가기 버튼 (홈이 아닌 모든 화면 공통) ---------- */
+function backBtn(){
+  return `<button class="btn ghost" style="width:auto;padding:8px 12px;margin-bottom:14px" id="backBtn">←</button>`;
+}
+function wireBackBtn(){
+  const b = $('#backBtn');
+  if(b) b.onclick = renderHome;
+}
+
 /* ---------- 상단바 ---------- */
 function topbar(){
   return `<div class="topbar">
     <div class="brand"><span class="dot">🌶️</span>
-      <div>Vocab Bank<small>Blabla Korean</small></div></div>
+      <div>Voca Bank<small>Blabla Korean</small></div></div>
     ${bankChip()}
   </div>`;
 }
@@ -226,6 +427,7 @@ function topbar(){
 /* ---------- 로그인 ---------- */
 function renderLogin(){
   botnav.classList.add('hidden');
+  const showDemo = new URLSearchParams(location.search).get('demo')==='true';
   app.innerHTML = `
   <div class="login">
     <img src="${IMG.study}" alt="">
@@ -239,17 +441,28 @@ function renderLogin(){
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.3 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.9 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.4 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.3 0 11.6-2.1 15.5-5.6l-7.1-5.5c-2 1.3-4.5 2.1-8.4 2.1-6.4 0-11.7-3.7-13.6-9.4l-7.9 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
       ${L.google}
     </button>
+    ${showDemo ? `
     <div class="demo-hint">${L.demoHint}</div>
     <div class="demo-pick">
       <button data-demo="jessica">🇫🇷 Jessica (FR)</button>
       <button data-demo="corine">🇬🇧 Corine (EN)</button>
-    </div>
+    </div>` : ``}
   </div>`;
 
-  $('#googleBtn').onclick = ()=>{ loadStudent('jessica'); renderHome(); };
-  app.querySelectorAll('[data-demo]').forEach(b=>{
-    b.onclick = ()=>{ loadStudent(b.dataset.demo); renderHome(); };
-  });
+  $('#googleBtn').onclick = async ()=>{
+    try{
+      await window.fb.signInWithPopup(window.fb.auth, window.fb.googleProvider);
+      // 성공하면 onAuthStateChanged -> handleLoginSuccess() 로 이어짐
+    } catch(e){
+      console.error(e);
+      alert('로그인 중 오류가 발생했습니다.');
+    }
+  };
+  if(showDemo){
+    app.querySelectorAll('[data-demo]').forEach(b=>{
+      b.onclick = ()=>{ currentUserEmail = null; loadStudent(b.dataset.demo); renderHome(); };
+    });
+  }
 }
 
 /* ---------- 오늘 복습 예정 개수 (SRS 데모) ---------- */
@@ -321,7 +534,7 @@ function renderWords(){
   student.words.forEach(w=>{ (byDate[w.date] ||= []).push(w); });
   const dates = Object.keys(byDate).sort().reverse();
 
-  let html = topbar() + `<h2 style="margin:6px 2px 4px">📖 ${L.words}</h2>
+  let html = backBtn() + topbar() + `<h2 style="margin:6px 2px 4px">📖 ${L.words}</h2>
     <div class="sub" style="color:var(--cream-dim);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>`;
   dates.forEach(d=>{
     const list = byDate[d];
@@ -337,13 +550,14 @@ function renderWords(){
     html += `</div>`;
   });
   app.innerHTML = html;
+  wireBackBtn();
 }
 function statusTag(w){
-  if(w.type==="sentence" && w.status==="new") return {cls:"sentence", txt:"phrase"};
+  if(w.type==="sentence" && w.status==="new") return {cls:"sentence", txt:L.sentenceTag};
   if(w.status==="master") return {cls:"master", txt:L.master};
   if(w.status==="known")  return {cls:"known", txt:L.known};
   if(w.status==="learning") return {cls:"known", txt:L.learning};
-  return {cls:"new", txt:"new"};
+  return {cls:"new", txt:L.newTag};
 }
 function fmtDate(d){
   const [y,m,day]=d.split('-');
@@ -358,7 +572,7 @@ function renderKnown(){
   botnav.classList.remove('hidden');
   setNav('known');
   const known = student.words.filter(w=>w.status==="known"||w.status==="master");
-  let html = topbar() + `<div class="hello">
+  let html = backBtn() + topbar() + `<div class="hello">
       <img src="${IMG.money}" alt="" style="width:70px">
       <div><h2>⭐ ${L.knownMenu}</h2>
       <div class="sub">${known.length} · ${L.knownSub}</div></div></div>`;
@@ -375,13 +589,14 @@ function renderKnown(){
     });
   }
   app.innerHTML = html;
+  wireBackBtn();
 }
 
 /* ---------- 도움말 ---------- */
 function renderHelp(){
   botnav.classList.remove('hidden');
   setNav('help');
-  let html = topbar() + `<div class="hello">
+  let html = backBtn() + topbar() + `<div class="hello">
     <img src="${IMG.study}" style="width:70px" alt="">
     <div><h2>❓ ${L.helpTitle}</h2></div></div>`;
   L.help.forEach(([emoji,title,desc])=>{
@@ -390,22 +605,16 @@ function renderHelp(){
       <span class="mtext"><b>${title}</b><span>${desc}</span></span></div>`;
   });
   html += `<button class="btn ghost" id="switchLang" style="margin-top:16px">🌐 ${L.switchLang}</button>`;
+  html += `<button class="btn chili" id="logoutBtn" style="margin-top:10px">🚪 ${L.logout}</button>`;
   app.innerHTML = html;
+  wireBackBtn();
   $('#switchLang').onclick = ()=>{ L = (L===T.fr)?T.en:T.fr; renderHelp(); };
+  $('#logoutBtn').onclick = doLogout;
 }
 
 /* =====================================================================
    퀴즈 세션
    ===================================================================== */
-
-// 다른 학생 단어에서 오답 보기 빌려오기 위한 풀
-function borrowedMeanings(lang){
-  const pool = [];
-  Object.values(SAMPLE).forEach(s=>{
-    if(s.lang===lang) s.words.forEach(w=>{ if(w.type==="word") pool.push(w.mean); });
-  });
-  return pool;
-}
 
 function buildQuestion(w, allWords){
   // 방향 랜덤: ko->mean (뜻 고르기) 또는 mean->ko (한국어 고르기)
@@ -420,12 +629,8 @@ function buildQuestion(w, allWords){
     .filter(x=>x.id!==w.id && x[field] && x[field]!==answer)
     .map(x=>x[field]);
   candidates = [...new Set(candidates)];
-
-  // 부족하면 다른 학생 뜻에서 빌려옴 (뜻 방향일 때만)
-  if(candidates.length<3 && dir==="ko2mean"){
-    const extra = borrowedMeanings(student.lang).filter(m=>m!==answer && !candidates.includes(m));
-    candidates = candidates.concat(shuffle(extra));
-  }
+  // 후보가 3개 미만이면(단어 수가 적은 학생) 그만큼만 오답 보기로 사용
+  // (다른 학생 데이터에서 빌려오지 않음 — 데모/타 학생 콘텐츠 혼입 방지)
   const distractors = shuffle(candidates).slice(0,3);
   const options = shuffle([answer, ...distractors]);
   return {w, dir, promptText, answer, options,
@@ -461,7 +666,7 @@ function renderQuestion(){
   const streakOff = s.streak===0 ? "off" : "";
   app.innerHTML = topbar() + `
     <div class="quiz-top">
-      <button class="btn ghost" style="width:auto;padding:8px 12px" id="quitBtn">✕</button>
+      <button class="btn ghost" style="width:auto;padding:8px 12px" id="quitBtn">←</button>
       <div class="progress"><i style="width:${(s.i/s.qs.length)*100}%"></i></div>
       <div class="streak ${streakOff}" id="streak">🔥 ${s.streak}</div>
     </div>
@@ -528,6 +733,9 @@ function answer(btn, chosen, q){
   const st = $('#streak');
   if(st){ st.textContent = `🔥 ${session.streak}`; st.className = "streak "+(session.streak===0?"off":""); }
 
+  // Firestore에 백그라운드 저장 (optimistic — 화면은 이미 갱신된 상태)
+  persistProgress();
+
   // 다음으로
   setTimeout(()=>nextQuestion(), correct? 1050 : 1750);
 }
@@ -562,19 +770,50 @@ function renderResult(){
   botnav.classList.add('hidden');
   const s = session;
   const img = s.correct>=7 ? IMG.money : s.correct>=5 ? IMG.excited : IMG.surprised;
-  app.innerHTML = topbar() + `
+  app.innerHTML = backBtn() + topbar() + `
     <div class="result">
-      <img src="${img}" alt="">
-      <h2>${L.resultTitle(s.correct)}</h2>
-      <div class="score">${L.resultScore(s.correct, s.qs.length)}</div>
-      <div class="earned">💰 +${wonFmt(s.earned)} ${L.earned}</div>
+      <div id="captureArea">
+        <img src="${img}" alt="">
+        <h2>${L.resultTitle(s.correct)}</h2>
+        <div class="score">${L.resultScore(s.correct, s.qs.length)}</div>
+        <div class="earned">💰 +${wonFmt(s.earned)} ${L.earned}</div>
+      </div>
       <div class="btn-row" style="flex-direction:column">
         <button class="btn" id="moreBtn">${L.more}</button>
         <button class="btn secondary" id="homeBtn">${L.home}</button>
+        <button class="btn secondary" id="shareBtn">📤 ${L.share}</button>
       </div>
     </div>`;
+  wireBackBtn();
   $('#moreBtn').onclick = ()=>startSession(s.source);
   $('#homeBtn').onclick = ()=>renderHome();
+  $('#shareBtn').onclick = shareResult;
+}
+
+/* ---------- 결과 캡처 & 공유 ---------- */
+async function shareResult(){
+  if(typeof html2canvas === 'undefined'){
+    alert('html2canvas not loaded');
+    return;
+  }
+  try{
+    const canvas = await html2canvas($('#captureArea'), {backgroundColor:'#151A2E'});
+    canvas.toBlob(async (blob)=>{
+      if(!blob) return;
+      const file = new File([blob], 'voca-bank-result.png', {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file], title:'Voca Bank'}); }
+        catch(e){ /* user cancelled share */ }
+      } else {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'voca-bank-result.png';
+        link.click();
+      }
+    }, 'image/png');
+  } catch(e){
+    console.error(e);
+  }
 }
 
 /* ---------- 하단 네비 ---------- */
@@ -594,4 +833,5 @@ botnav.querySelectorAll('button').forEach(b=>{
 });
 
 /* ---------- 시작 ---------- */
-renderLogin();
+if(window.fb) initApp();
+else window.addEventListener('fb-ready', initApp);
