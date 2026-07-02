@@ -69,7 +69,8 @@ const T = {
     logoutConfirm: "Tu veux vraiment te déconnecter ?",
     notRegistered: "Tu n'es pas dans la liste des élèves. Contacte Blabla Korean.",
     vocabLoading: "Chargement de tes mots…",
-    vocabNotReady: "Ta liste de mots n'est pas encore prête. Contacte ton professeur."
+    vocabNotReady: "Ta liste de mots n'est pas encore prête. Contacte ton professeur.",
+    pronToggle: "Voir la prononciation"
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
@@ -116,7 +117,8 @@ const T = {
     logoutConfirm: "Are you sure you want to log out?",
     notRegistered: "You're not on the registered student list. Please contact Blabla Korean.",
     vocabLoading: "Loading your words…",
-    vocabNotReady: "Your word list isn't ready yet. Please contact your teacher."
+    vocabNotReady: "Your word list isn't ready yet. Please contact your teacher.",
+    pronToggle: "Show pronunciation"
   }
 };
 
@@ -187,6 +189,7 @@ let bank = 0;
 let bestStreak = 0;
 let currentUserEmail = null; // Firebase 로그인 이메일 (데모 모드면 null)
 let studentWhitelist = [];   // 구글시트에서 불러온 {email,name,lang,sheetTab}[]
+let showPron = false;        // 발음 표시 토글 (세션 전체 공용, 문제별 개별 아님)
 
 const REWARD = 100, PENALTY = 50, KNOWN_STREAK = 3;
 
@@ -675,12 +678,23 @@ function renderQuestion(){
       <div class="prompt">
         <div class="plabel">${q.label}</div>
         <div class="pword kr ${q.w.type==='sentence'?'sentence':''}">${q.promptText}</div>
-        ${(q.dir==="ko2mean" && q.w.pron)?`<div class="pron">${q.w.pron}</div>`:""}
+        ${(q.dir==="ko2mean" && q.w.pron) ? `
+          <button class="pron-toggle ${showPron?'active':''}" id="pronToggle" title="${L.pronToggle}">🔤</button>
+          <div class="pron ${showPron?'':'hidden'}" id="pronText">${q.w.pron}</div>
+        ` : ""}
       </div>
       <div class="options" id="options"></div>
     </div>
     <div id="noteSlot"></div>
   `;
+  const pronBtn = $('#pronToggle');
+  if(pronBtn){
+    pronBtn.onclick = ()=>{
+      showPron = !showPron;
+      pronBtn.classList.toggle('active', showPron);
+      $('#pronText').classList.toggle('hidden', !showPron);
+    };
+  }
   const optEl = $('#options');
   q.options.forEach(opt=>{
     const b = document.createElement('button');

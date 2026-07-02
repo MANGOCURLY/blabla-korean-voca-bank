@@ -139,6 +139,12 @@ body{
 .prompt .pword{font-size:2.3rem;font-weight:800;line-height:1.15}
 .prompt .pword.sentence{font-size:1.5rem}
 .prompt .pron{color:var(--gold);font-size:1rem;margin-top:8px;font-weight:600}
+.pron-toggle{appearance:none;cursor:pointer;font-family:inherit;margin-top:10px;
+  width:30px;height:30px;border-radius:999px;font-size:.8rem;font-weight:700;
+  background:var(--navy-3);border:1px solid var(--line);color:var(--cream-dim);
+  display:inline-flex;align-items:center;justify-content:center;transition:.15s}
+.pron-toggle:hover{border-color:var(--gold);color:var(--gold)}
+.pron-toggle.active{background:var(--gold);border-color:var(--gold);color:var(--navy)}
 
 .options{display:flex;flex-direction:column;gap:10px;margin-top:22px}
 .opt{width:100%;text-align:left;background:var(--navy-3);border:2px solid transparent;border-radius:14px;
