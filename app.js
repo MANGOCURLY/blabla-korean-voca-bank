@@ -184,6 +184,7 @@ const SAMPLE = {
 /* ---------- 상태 ---------- */
 let student = null;   // {name, lang, words:[...] with runtime stats}
 let L = T.fr;         // current language pack
+let loginLang = 'fr';  // 로그인 화면 전용 미리보기 언어 (로그인 전에만 사용)
 let session = null;   // active quiz session
 let bank = 0;
 let bestStreak = 0;
@@ -315,7 +316,7 @@ async function restoreProgress(email){
   const snap = await window.fb.getDoc(ref);
   if(snap.exists()){
     const data = snap.data();
-    bank = typeof data.points === 'number' ? data.points : 0;
+    bank = typeof data.points === 'number' ? data.points : 100;
     const srs = data.srsProgress || {};
     student.words.forEach(w=>{
       const p = srs[w.ko];
@@ -327,8 +328,8 @@ async function restoreProgress(email){
       }
     });
   } else {
-    bank = 0;
-    await window.fb.setDoc(ref, {points:0, srsProgress:{}, lastUpdated: window.fb.serverTimestamp()});
+    bank = 100;
+    await window.fb.setDoc(ref, {points:100, srsProgress:{}, lastUpdated: window.fb.serverTimestamp()});
   }
 }
 
@@ -431,27 +432,30 @@ function topbar(){
 function renderLogin(){
   botnav.classList.add('hidden');
   const showDemo = new URLSearchParams(location.search).get('demo')==='true';
+  const Lx = T[loginLang];
   app.innerHTML = `
+  <button class="lang-toggle" id="loginLangToggle">🌐 ${loginLang.toUpperCase()}</button>
   <div class="login">
     <img src="${IMG.study}" alt="">
     <div class="brand" style="justify-content:center;margin-bottom:4px">
       <span class="dot" style="font-size:1.1rem">🌶️</span>
       <small style="color:var(--gold);letter-spacing:2px">BLABLA KOREAN</small>
     </div>
-    <h1>${L.loginTitle[0]}<br><span>${L.loginTitle[1]}</span></h1>
-    <p>${L.loginDesc}</p>
+    <h1>${Lx.loginTitle[0]}<br><span>${Lx.loginTitle[1]}</span></h1>
+    <p>${Lx.loginDesc}</p>
     <button class="google-btn" id="googleBtn">
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.3 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.9 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.4 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.3 0 11.6-2.1 15.5-5.6l-7.1-5.5c-2 1.3-4.5 2.1-8.4 2.1-6.4 0-11.7-3.7-13.6-9.4l-7.9 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
-      ${L.google}
+      ${Lx.google}
     </button>
     ${showDemo ? `
-    <div class="demo-hint">${L.demoHint}</div>
+    <div class="demo-hint">${Lx.demoHint}</div>
     <div class="demo-pick">
       <button data-demo="jessica">🇫🇷 Jessica (FR)</button>
       <button data-demo="corine">🇬🇧 Corine (EN)</button>
     </div>` : ``}
   </div>`;
 
+  $('#loginLangToggle').onclick = ()=>{ loginLang = (loginLang==='fr')?'en':'fr'; renderLogin(); };
   $('#googleBtn').onclick = async ()=>{
     try{
       await window.fb.signInWithPopup(window.fb.auth, window.fb.googleProvider);
