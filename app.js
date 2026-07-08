@@ -71,7 +71,10 @@ const T = {
     notRegistered: "Tu n'es pas dans la liste des élèves. Contacte Blabla Korean.",
     vocabLoading: "Chargement de tes mots…",
     vocabNotReady: "Ta liste de mots n'est pas encore prête. Contacte ton professeur.",
-    pronToggle: "Voir la prononciation"
+    pronToggle: "Voir la prononciation",
+    inAppWarning: "Connexion Google impossible dans cette appli. Ouvre ce lien dans Chrome ou Safari.",
+    copyLink: "Copier le lien",
+    copiedMsg: "Lien copié ! Colle-le dans Chrome ou Safari."
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
@@ -120,7 +123,10 @@ const T = {
     notRegistered: "You're not on the registered student list. Please contact Blabla Korean.",
     vocabLoading: "Loading your words…",
     vocabNotReady: "Your word list isn't ready yet. Please contact your teacher.",
-    pronToggle: "Show pronunciation"
+    pronToggle: "Show pronunciation",
+    inAppWarning: "Google sign-in isn't available in this app. Open this link in Chrome or Safari instead.",
+    copyLink: "Copy link",
+    copiedMsg: "Link copied! Paste it into Chrome or Safari."
   }
 };
 
@@ -186,7 +192,17 @@ const SAMPLE = {
 /* ---------- 상태 ---------- */
 let student = null;   // {name, lang, words:[...] with runtime stats}
 let L = T.fr;         // current language pack
-let loginLang = 'fr';  // 로그인 화면 전용 미리보기 언어 (로그인 전에만 사용)
+function detectInitialLang(){
+  try{
+    const saved = localStorage.getItem('blabla_login_lang');
+    if(saved === 'fr' || saved === 'en') return saved;
+  }catch(e){}
+  try{
+    const browserLang = (navigator.language || navigator.languages?.[0] || 'fr').split('-')[0];
+    return (browserLang === 'en') ? 'en' : 'fr'; // T 객체에 fr/en만 있으므로 그 외는 전부 fr
+  }catch(e){ return 'fr'; }
+}
+let loginLang = detectInitialLang();  // 로그인 화면 전용 미리보기 언어 (로그인 전에만 사용)
 let session = null;   // active quiz session
 let bank = 0;
 let bestStreak = 0;
@@ -431,10 +447,16 @@ function topbar(){
    ===================================================================== */
 
 /* ---------- 로그인 ---------- */
+function isInAppBrowser(){
+  const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+  return /KAKAOTALK|Instagram|FBAN|FBAV|Line\/|NAVER\(inapp/i.test(ua);
+}
+
 function renderLogin(){
   botnav.classList.add('hidden');
   const showDemo = new URLSearchParams(location.search).get('demo')==='true';
   const Lx = T[loginLang];
+  const inApp = isInAppBrowser();
   app.innerHTML = `
   <button class="lang-toggle" id="loginLangToggle">🌐 ${loginLang.toUpperCase()}</button>
   <div class="login">
@@ -445,11 +467,18 @@ function renderLogin(){
     </div>
     <h1>${Lx.loginTitle[0]}<br><span>${Lx.loginTitle[1]}</span></h1>
     <p>${Lx.loginDesc}</p>
+    ${inApp ? `
+    <div class="card" style="max-width:320px;margin:0 auto">
+      <p style="margin-bottom:14px">${Lx.inAppWarning}</p>
+      <button class="btn" id="copyLinkBtn">${Lx.copyLink}</button>
+    </div>
+    ` : `
     <button class="google-btn" id="googleBtn">
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.3 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.9 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.4 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.3 0 11.6-2.1 15.5-5.6l-7.1-5.5c-2 1.3-4.5 2.1-8.4 2.1-6.4 0-11.7-3.7-13.6-9.4l-7.9 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
       ${Lx.google}
     </button>
-    ${showDemo ? `
+    `}
+    ${(!inApp && showDemo) ? `
     <div class="demo-hint">${Lx.demoHint}</div>
     <div class="demo-pick">
       <button data-demo="jessica">🇫🇷 Jessica (FR)</button>
@@ -457,17 +486,32 @@ function renderLogin(){
     </div>` : ``}
   </div>`;
 
-  $('#loginLangToggle').onclick = ()=>{ loginLang = (loginLang==='fr')?'en':'fr'; renderLogin(); };
-  $('#googleBtn').onclick = async ()=>{
-    try{
-      await window.fb.signInWithPopup(window.fb.auth, window.fb.googleProvider);
-      // 성공하면 onAuthStateChanged -> handleLoginSuccess() 로 이어짐
-    } catch(e){
-      console.error(e);
-      alert('로그인 중 오류가 발생했습니다.');
-    }
+  $('#loginLangToggle').onclick = ()=>{
+    loginLang = (loginLang==='fr')?'en':'fr';
+    try{ localStorage.setItem('blabla_login_lang', loginLang); }catch(e){}
+    renderLogin();
   };
-  if(showDemo){
+  if(inApp){
+    $('#copyLinkBtn').onclick = ()=>{
+      try{
+        navigator.clipboard.writeText(window.location.href);
+        alert(Lx.copiedMsg);
+      }catch(e){
+        alert(window.location.href); // 클립보드 API 실패 시 fallback으로 링크 노출
+      }
+    };
+  } else {
+    $('#googleBtn').onclick = async ()=>{
+      try{
+        await window.fb.signInWithPopup(window.fb.auth, window.fb.googleProvider);
+        // 성공하면 onAuthStateChanged -> handleLoginSuccess() 로 이어짐
+      } catch(e){
+        console.error(e);
+        alert('로그인 중 오류가 발생했습니다.');
+      }
+    };
+  }
+  if(!inApp && showDemo){
     app.querySelectorAll('[data-demo]').forEach(b=>{
       b.onclick = ()=>{ currentUserEmail = null; loadStudent(b.dataset.demo); renderHome(); };
     });
