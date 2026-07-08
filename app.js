@@ -48,6 +48,7 @@ const T = {
     correct: "Bravo !", wrong: "Aïe, ça pique !",
     answerWas: "La bonne réponse :",
     more: "10 questions de plus",
+    next: "Suivant →",
     home: "Retour à l'accueil",
     resultTitle: (n)=> n>=9?"Champion piquant !": n>=7?"Bien joué !": n>=5?"Pas mal !":"Continue !",
     resultScore: (c,t)=>`${c} bonnes réponses sur ${t}`,
@@ -96,6 +97,7 @@ const T = {
     correct: "Nice!", wrong: "Ouch, spicy!",
     answerWas: "Correct answer:",
     more: "10 more questions",
+    next: "Next →",
     home: "Back to home",
     resultTitle: (n)=> n>=9?"Spicy champion!": n>=7?"Well done!": n>=5?"Not bad!":"Keep going!",
     resultScore: (c,t)=>`${c} correct out of ${t}`,
@@ -754,8 +756,10 @@ function answer(btn, chosen, q){
   // Firestore에 백그라운드 저장 (optimistic — 화면은 이미 갱신된 상태)
   persistProgress();
 
-  // 다음으로
-  setTimeout(()=>nextQuestion(), correct? 1050 : 1750);
+  // 학생이 답을 다시 읽고 외울 시간을 가질 수 있도록 자동으로 넘어가지 않고
+  // "다음 →" 버튼을 눌러야 다음 문제로 진행
+  $('#noteSlot').insertAdjacentHTML('beforeend', `<button class="btn" id="nextBtn" style="margin-top:14px">${L.next}</button>`);
+  $('#nextBtn').onclick = ()=>nextQuestion();
 }
 
 function nextQuestion(){
