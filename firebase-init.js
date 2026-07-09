@@ -3,7 +3,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion
+  getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -24,6 +24,6 @@ const googleProvider = new GoogleAuthProvider();
 window.fb = {
   auth, db, googleProvider,
   signInWithPopup, signOut, onAuthStateChanged,
-  doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion
+  doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemove
 };
 window.dispatchEvent(new Event('fb-ready'));

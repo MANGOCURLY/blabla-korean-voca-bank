@@ -88,6 +88,8 @@ const T = {
     addWordDuplicateError: "Ce mot existe déjà dans ta liste.",
     addWordDemoNotice: "Mode démo : ce mot ne sera pas sauvegardé après un rafraîchissement.",
     tagCustom: "Perso",
+    deleteWord: "Supprimer",
+    deleteWordConfirm: "Supprimer ce mot de ton vocabulaire personnel ?",
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
@@ -153,6 +155,8 @@ const T = {
     addWordDuplicateError: "This word is already in your list.",
     addWordDemoNotice: "Demo mode: this word won't be saved after a refresh.",
     tagCustom: "Mine",
+    deleteWord: "Delete",
+    deleteWordConfirm: "Delete this word from your personal vocabulary?",
   }
 };
 
@@ -640,16 +644,13 @@ function renderWords(){
     html += `<div class="day-block">
       <div class="day-head">📅 ${fmtDate(d)} <span class="count">· ${list.length}</span></div>`;
     list.forEach(w=>{
-      html += `<div class="word-row">
-        <span class="ko kr">${w.ko}</span>
-        <span class="mean">${w.mean}</span>
-        <span class="tag ${statusTag(w).cls}">${statusTag(w).txt}</span>
-      </div>`;
+      html += wordRowHtml(w);
     });
     html += `</div>`;
   });
   app.innerHTML = html;
   wireBackBtn();
+  wireDeleteButtons(renderWords);
 }
 function statusTag(w){
   if(w.type==="sentence" && w.status==="new") return {cls:"sentence", txt:L.sentenceTag};
@@ -664,6 +665,45 @@ function fmtDate(d){
     ? ["janv","févr","mars","avr","mai","juin","juil","août","sept","oct","nov","déc"]
     : ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return `${parseInt(day)} ${months[parseInt(m)-1]}`;
+}
+
+/* ---------- 단어 행 렌더 (공통) + 삭제 ---------- */
+function wordRowHtml(w){
+  const del = (w.source==='custom')
+    ? `<button class="word-del" data-del="${w.id}" title="${L.deleteWord}">✕</button>`
+    : '';
+  return `<div class="word-row">
+    <span class="ko kr">${w.ko}</span>
+    <span class="mean">${w.mean}</span>
+    ${w.source==='custom' ? `<span class="tag custom">${L.tagCustom}</span>` : ''}
+    <span class="tag ${statusTag(w).cls}">${statusTag(w).txt}</span>
+    ${del}
+  </div>`;
+}
+
+function wireDeleteButtons(reRenderFn){
+  app.querySelectorAll('.word-del').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      deleteCustomWord(Number(btn.dataset.del), reRenderFn);
+    };
+  });
+}
+
+function deleteCustomWord(id, reRenderFn){
+  const w = student.words.find(x=>x.id===id && x.source==='custom');
+  if(!w) return;
+  if(!confirm(L.deleteWordConfirm)) return;
+
+  if(currentUserEmail){
+    const ref = window.fb.doc(window.fb.db, 'students', currentUserEmail);
+    window.fb.updateDoc(ref, {
+      customWords: window.fb.arrayRemove({id:w.id, ko:w.ko, mean:w.mean, dateAdded:w.date})
+    }).catch(e=>console.error('커스텀 단어 삭제 실패', e));
+  }
+
+  student.words = student.words.filter(x=>x.id!==id);
+  if(reRenderFn) reRenderFn();
 }
 
 /* ---------- 아는 단어 / 마스터 ---------- */
@@ -681,14 +721,12 @@ function renderKnown(){
       <p>${L.emptyKnown}</p></div>`;
   } else {
     known.forEach(w=>{
-      html += `<div class="word-row">
-        <span class="ko kr">${w.ko}</span>
-        <span class="mean">${w.mean}</span>
-        <span class="tag ${statusTag(w).cls}">${statusTag(w).txt}</span></div>`;
+      html += wordRowHtml(w);
     });
   }
   app.innerHTML = html;
   wireBackBtn();
+  wireDeleteButtons(renderKnown);
 }
 
 /* ---------- 배운 단어 (한 번이라도 맞춘 단어) ---------- */
@@ -706,15 +744,12 @@ function renderLearned(){
       <p>${L.emptyLearned}</p></div>`;
   } else {
     learned.forEach(w=>{
-      html += `<div class="word-row">
-        <span class="ko kr">${w.ko}</span>
-        <span class="mean">${w.mean}</span>
-        ${w.source==='custom' ? `<span class="tag custom">${L.tagCustom}</span>` : ''}
-        <span class="tag ${statusTag(w).cls}">${statusTag(w).txt}</span></div>`;
+      html += wordRowHtml(w);
     });
   }
   app.innerHTML = html;
   wireBackBtn();
+  wireDeleteButtons(renderLearned);
 }
 
 /* ---------- 나만의 단어 추가 ---------- */
