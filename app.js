@@ -90,6 +90,9 @@ const T = {
     tagCustom: "Perso",
     deleteWord: "Supprimer",
     deleteWordConfirm: "Supprimer ce mot de ton vocabulaire personnel ?",
+    myWords: "Mes mots à moi",
+    myWordsSub: "Le vocabulaire que tu as ajouté toi-même",
+    emptyMyWords: "Tu n'as pas encore ajouté de mot. Clique sur \"Ajouter un mot\" pour commencer !",
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
@@ -157,6 +160,9 @@ const T = {
     tagCustom: "Mine",
     deleteWord: "Delete",
     deleteWordConfirm: "Delete this word from your personal vocabulary?",
+    myWords: "My words",
+    myWordsSub: "Vocabulary you've added yourself",
+    emptyMyWords: "You haven't added any words yet. Tap \"Add a word\" to get started!",
   }
 };
 
@@ -614,6 +620,11 @@ function renderHome(){
       <span class="mtext"><b>${L.knownMenu}</b><span>${L.knownSub}</span></span>
       <span class="arrow">→</span>
     </button>
+    <button class="menu-btn" id="myWordsBtn">
+      <span class="emoji">📝</span>
+      <span class="mtext"><b>${L.myWords}</b><span>${L.myWordsSub}</span></span>
+      <span class="arrow">→</span>
+    </button>
     <button class="menu-btn" id="addWordBtn">
       <span class="emoji">➕</span>
       <span class="mtext"><b>${L.addWord}</b><span>${L.addWordSub}</span></span>
@@ -624,6 +635,7 @@ function renderHome(){
   $('#reviewBtn').onclick = ()=>startSession(student.words.filter(w=>w.status!=="master"));
   $('#wordsBtn').onclick = renderWords;
   $('#knownBtn').onclick = renderKnown;
+  $('#myWordsBtn').onclick = renderMyWords;
   $('#addWordBtn').onclick = renderAddWord;
   $('#statLearned').onclick = renderLearned;
   $('#statKnown').onclick = renderKnown;
@@ -750,6 +762,28 @@ function renderLearned(){
   app.innerHTML = html;
   wireBackBtn();
   wireDeleteButtons(renderLearned);
+}
+
+/* ---------- 내가 추가한 단어만 모아보기 ---------- */
+function renderMyWords(){
+  botnav.classList.add('hidden');
+  const mine = student.words.filter(w=>w.source==='custom');
+  let html = backBtn() + topbar() + `<div class="hello">
+      <img src="${IMG.study}" alt="" style="width:70px">
+      <div><h2>📝 ${L.myWords}</h2>
+      <div class="sub">${mine.length} · ${L.myWordsSub}</div></div></div>`;
+  if(mine.length===0){
+    html += `<div class="card" style="text-align:center;color:var(--cream-dim)">
+      <img src="${IMG.grumpy}" style="width:120px;margin-bottom:10px" alt="">
+      <p>${L.emptyMyWords}</p></div>`;
+  } else {
+    mine.forEach(w=>{
+      html += wordRowHtml(w);
+    });
+  }
+  app.innerHTML = html;
+  wireBackBtn();
+  wireDeleteButtons(renderMyWords);
 }
 
 /* ---------- 나만의 단어 추가 ---------- */
