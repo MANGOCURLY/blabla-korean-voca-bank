@@ -69,6 +69,7 @@ const T = {
     logout: "Se déconnecter",
     logoutConfirm: "Tu veux vraiment te déconnecter ?",
     notRegistered: "Tu n'es pas dans la liste des élèves. Contacte Blabla Korean.",
+    listLoadError: "Impossible de charger la liste des élèves. Vérifie ta connexion et rafraîchis la page (ou réessaie dans quelques minutes).",
     vocabLoading: "Chargement de tes mots…",
     vocabNotReady: "Ta liste de mots n'est pas encore prête. Contacte ton professeur.",
     pronToggle: "Voir la prononciation",
@@ -139,6 +140,7 @@ const T = {
     logout: "Log out",
     logoutConfirm: "Are you sure you want to log out?",
     notRegistered: "You're not on the registered student list. Please contact Blabla Korean.",
+    listLoadError: "Couldn't load the student list. Check your connection and refresh the page (or try again in a few minutes).",
     vocabLoading: "Loading your words…",
     vocabNotReady: "Your word list isn't ready yet. Please contact your teacher.",
     pronToggle: "Show pronunciation",
@@ -244,6 +246,7 @@ let bank = 0;
 let bestStreak = 0;
 let currentUserEmail = null; // Firebase 로그인 이메일 (데모 모드면 null)
 let studentWhitelist = [];   // 구글시트에서 불러온 {email,name,lang,sheetTab}[]
+let whitelistLoaded = false; // 명단 로딩 성공 여부 (실패와 "진짜 미등록" 구분용)
 let showPron = false;        // 발음 표시 토글 (세션 전체 공용, 문제별 개별 아님)
 
 const REWARD = 100, PENALTY = 50, KNOWN_STREAK = 3;
@@ -272,14 +275,25 @@ function parseCsvLine(line){
   return result.map(s=>s.trim());
 }
 
-async function fetchStudentWhitelist(){
-  const res = await fetch(STUDENT_LIST_CSV_URL);
-  const text = await res.text();
-  const lines = text.trim().split(/\r?\n/);
-  return lines.slice(1).map(parseCsvLine).map(cols=>{
-    const [email,name,lang,sheetTab,vocabCsvUrl] = cols;
-    return {email,name,lang,sheetTab,vocabCsvUrl};
-  }).filter(r=>r.email);
+async function fetchStudentWhitelist(retries=2){
+  let lastErr;
+  for(let attempt=0; attempt<=retries; attempt++){
+    try{
+      const res = await fetch(STUDENT_LIST_CSV_URL, {cache:'no-store'});
+      if(!res.ok) throw new Error('HTTP '+res.status); // 구글이 429/5xx/에러HTML 주면 여기서 잡힘
+      const text = await res.text();
+      const rows = text.trim().split(/\r?\n/).slice(1).map(parseCsvLine).map(cols=>{
+        const [email,name,lang,sheetTab,vocabCsvUrl] = cols;
+        return {email,name,lang,sheetTab,vocabCsvUrl};
+      }).filter(r=>r.email);
+      if(rows.length === 0) throw new Error('빈 명단'); // 파싱은 됐지만 학생 0명 = 비정상 응답
+      return rows;
+    }catch(e){
+      lastErr = e;
+      if(attempt < retries) await new Promise(r=>setTimeout(r, 600*(attempt+1))); // 0.6s, 1.2s 백오프
+    }
+  }
+  throw lastErr; // 재시도 다 실패 → 호출부가 "로딩 실패"로 구분 처리
 }
 
 /* ---------- 학생별 단어 CSV (구글시트) ---------- */
@@ -412,6 +426,19 @@ function persistProgress(){
 
 /* ---------- 로그인 성공 처리 (Google) ---------- */
 async function handleLoginSuccess(email){
+  // 명단을 아직 못 불러왔으면 = 미등록이 아니라 로딩 실패. 로그인 시점에 한 번 더 시도.
+  if(!whitelistLoaded){
+    try{
+      studentWhitelist = await fetchStudentWhitelist();
+      whitelistLoaded = true;
+    }catch(e){
+      console.error('학생목록 재로딩 실패', e);
+      alert(L.listLoadError); // "미등록"이 아니라 "명단 로딩 실패, 새로고침" 안내
+      currentUserEmail = null;
+      await window.fb.signOut(window.fb.auth);
+      return;
+    }
+  }
   const row = studentWhitelist.find(r=>r.email.toLowerCase()===email.toLowerCase());
   if(!row){
     alert(L.notRegistered);
@@ -448,7 +475,13 @@ async function doLogout(){
 
 /* ---------- 앱 시작 (Firebase 준비된 뒤) ---------- */
 async function initApp(){
-  studentWhitelist = await fetchStudentWhitelist().catch(e=>{ console.error('학생목록 로딩 실패', e); return []; });
+  try{
+    studentWhitelist = await fetchStudentWhitelist();
+    whitelistLoaded = true;
+  }catch(e){
+    console.error('학생목록 로딩 실패', e);
+    studentWhitelist = []; whitelistLoaded = false; // 로그인 시 재시도로 복구됨
+  }
   window.fb.onAuthStateChanged(window.fb.auth, user=>{
     if(user && user.email) handleLoginSuccess(user.email);
     else { currentUserEmail = null; renderLogin(); }
