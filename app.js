@@ -55,12 +55,12 @@ const T = {
     earned: "gagnés",
     known: "Connus", master: "Maîtrisés", learning: "En cours",
     emptyKnown: "Pas encore de mot connu. Réponds juste 3 fois de suite à un mot pour le débloquer !",
-    navHome:"Accueil", navWords:"Mots", navKnown:"Appris", navHelp:"Aide",
+    navHome:"Accueil", navWords:"Mots", navLearned:"Appris", navKnown:"Connus", navHelp:"Aide",
     helpTitle:"Comment ça marche",
     help: [
       ["💰","La banque de wons","+100 wons par bonne réponse, −50 par erreur. Ta banque ne descend jamais sous 0."],
       ["🔥","Les séries","Enchaîne les bonnes réponses pour faire monter ta série et voir le piment danser."],
-      ["⭐","Mots connus","3 bonnes réponses de suite = mot connu. Continue de le revoir pour le maîtriser."],
+      ["🧠","Mots connus","3 bonnes réponses de suite = mot connu. Continue de le revoir pour le maîtriser."],
       ["🧠","Révision espacée","Chaque jour, on te ressort les mots au bon moment : 1, 3, 7, 14 puis 30 jours."],
     ],
     switchLang:"English",
@@ -74,7 +74,20 @@ const T = {
     pronToggle: "Voir la prononciation",
     inAppWarning: "Connexion Google impossible dans cette appli. Ouvre ce lien dans Chrome ou Safari.",
     copyLink: "Copier le lien",
-    copiedMsg: "Lien copié ! Colle-le dans Chrome ou Safari."
+    copiedMsg: "Lien copié ! Colle-le dans Chrome ou Safari.",
+    learnedMenu: "Mots appris",
+    learnedSub: "Tout ce que tu as déjà réussi une fois",
+    emptyLearned: "Pas encore de mot appris. Commence l'entraînement pour en débloquer !",
+    addWord: "Ajouter un mot",
+    addWordSub: "Ton vocabulaire personnel",
+    addWordKoLabel: "Mot en coréen",
+    addWordMeanLabel: "Sens en français",
+    addWordSave: "Enregistrer",
+    addWordCancel: "Annuler",
+    addWordEmptyError: "Remplis les deux champs.",
+    addWordDuplicateError: "Ce mot existe déjà dans ta liste.",
+    addWordDemoNotice: "Mode démo : ce mot ne sera pas sauvegardé après un rafraîchissement.",
+    tagCustom: "Perso",
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
@@ -107,12 +120,12 @@ const T = {
     earned: "earned",
     known: "Known", master: "Mastered", learning: "Learning",
     emptyKnown: "No known words yet. Answer a word right 3 times in a row to unlock it!",
-    navHome:"Home", navWords:"Words", navKnown:"Learned", navHelp:"Help",
+    navHome:"Home", navWords:"Words", navLearned:"Learned", navKnown:"Known", navHelp:"Help",
     helpTitle:"How it works",
     help: [
       ["💰","The won bank","+100 won per correct answer, −50 per miss. Your bank never drops below 0."],
       ["🔥","Streaks","Chain correct answers to build your streak and watch the chili dance."],
-      ["⭐","Known words","3 correct in a row = a known word. Keep reviewing to master it."],
+      ["🧠","Known words","3 correct in a row = a known word. Keep reviewing to master it."],
       ["🧠","Spaced review","Each day we resurface words at the right time: 1, 3, 7, 14, then 30 days."],
     ],
     switchLang:"Français",
@@ -126,7 +139,20 @@ const T = {
     pronToggle: "Show pronunciation",
     inAppWarning: "Google sign-in isn't available in this app. Open this link in Chrome or Safari instead.",
     copyLink: "Copy link",
-    copiedMsg: "Link copied! Paste it into Chrome or Safari."
+    copiedMsg: "Link copied! Paste it into Chrome or Safari.",
+    learnedMenu: "Learned words",
+    learnedSub: "Everything you've gotten right at least once",
+    emptyLearned: "No learned words yet. Start practicing to unlock some!",
+    addWord: "Add a word",
+    addWordSub: "Your personal vocabulary",
+    addWordKoLabel: "Korean word",
+    addWordMeanLabel: "Meaning in English",
+    addWordSave: "Save",
+    addWordCancel: "Cancel",
+    addWordEmptyError: "Please fill in both fields.",
+    addWordDuplicateError: "This word is already in your list.",
+    addWordDemoNotice: "Demo mode: this word won't be saved after a refresh.",
+    tagCustom: "Mine",
   }
 };
 
@@ -345,9 +371,21 @@ async function restoreProgress(email){
         w.status = p.status||"new";
       }
     });
+    // 학생이 직접 추가한 단어 병합
+    const customWords = data.customWords || [];
+    let nextId = student.words.length ? Math.max(...student.words.map(w=>w.id)) + 1 : 0;
+    customWords.forEach(cw=>{
+      const p = srs[cw.ko] || {};
+      student.words.push({
+        id: nextId++, date: cw.dateAdded, ko: cw.ko, pron:"", mean: cw.mean, type:"word",
+        source:"custom",
+        correctStreak: p.correctStreak||0, totalCorrect: p.totalCorrect||0,
+        seen: p.seen||0, status: p.status||"new"
+      });
+    });
   } else {
     bank = 100;
-    await window.fb.setDoc(ref, {points:100, srsProgress:{}, lastUpdated: window.fb.serverTimestamp()});
+    await window.fb.setDoc(ref, {points:100, srsProgress:{}, customWords:[], lastUpdated: window.fb.serverTimestamp()});
   }
 }
 
@@ -544,8 +582,8 @@ function renderHome(){
     </div>
 
     <div class="stat-grid">
-      <div class="stat"><b>${s.learned}</b><span>${L.statLearned}</span></div>
-      <div class="stat"><b>${s.known}</b><span>${L.statKnown}</span></div>
+      <div class="stat" id="statLearned"><b>${s.learned}</b><span>${L.statLearned}</span></div>
+      <div class="stat" id="statKnown"><b>${s.known}</b><span>${L.statKnown}</span></div>
       <div class="stat"><b>${bestStreak}🔥</b><span>${L.statStreak}</span></div>
     </div>
 
@@ -568,8 +606,13 @@ function renderHome(){
       <span class="arrow">→</span>
     </button>
     <button class="menu-btn" id="knownBtn">
-      <span class="emoji">⭐</span>
+      <span class="emoji">🧠</span>
       <span class="mtext"><b>${L.knownMenu}</b><span>${L.knownSub}</span></span>
+      <span class="arrow">→</span>
+    </button>
+    <button class="menu-btn" id="addWordBtn">
+      <span class="emoji">➕</span>
+      <span class="mtext"><b>${L.addWord}</b><span>${L.addWordSub}</span></span>
       <span class="arrow">→</span>
     </button>
   `;
@@ -577,6 +620,9 @@ function renderHome(){
   $('#reviewBtn').onclick = ()=>startSession(student.words.filter(w=>w.status!=="master"));
   $('#wordsBtn').onclick = renderWords;
   $('#knownBtn').onclick = renderKnown;
+  $('#addWordBtn').onclick = renderAddWord;
+  $('#statLearned').onclick = renderLearned;
+  $('#statKnown').onclick = renderKnown;
 }
 
 /* ---------- 날짜별 단어 ---------- */
@@ -627,7 +673,7 @@ function renderKnown(){
   const known = student.words.filter(w=>w.status==="known"||w.status==="master");
   let html = backBtn() + topbar() + `<div class="hello">
       <img src="${IMG.money}" alt="" style="width:70px">
-      <div><h2>⭐ ${L.knownMenu}</h2>
+      <div><h2>🧠 ${L.knownMenu}</h2>
       <div class="sub">${known.length} · ${L.knownSub}</div></div></div>`;
   if(known.length===0){
     html += `<div class="card" style="text-align:center;color:var(--cream-dim)">
@@ -643,6 +689,94 @@ function renderKnown(){
   }
   app.innerHTML = html;
   wireBackBtn();
+}
+
+/* ---------- 배운 단어 (한 번이라도 맞춘 단어) ---------- */
+function renderLearned(){
+  botnav.classList.remove('hidden');
+  setNav('learned');
+  const learned = student.words.filter(w=>w.totalCorrect>0);
+  let html = backBtn() + topbar() + `<div class="hello">
+      <img src="${IMG.excited}" alt="" style="width:70px">
+      <div><h2>✅ ${L.learnedMenu}</h2>
+      <div class="sub">${learned.length} · ${L.learnedSub}</div></div></div>`;
+  if(learned.length===0){
+    html += `<div class="card" style="text-align:center;color:var(--cream-dim)">
+      <img src="${IMG.grumpy}" style="width:120px;margin-bottom:10px" alt="">
+      <p>${L.emptyLearned}</p></div>`;
+  } else {
+    learned.forEach(w=>{
+      html += `<div class="word-row">
+        <span class="ko kr">${w.ko}</span>
+        <span class="mean">${w.mean}</span>
+        ${w.source==='custom' ? `<span class="tag custom">${L.tagCustom}</span>` : ''}
+        <span class="tag ${statusTag(w).cls}">${statusTag(w).txt}</span></div>`;
+    });
+  }
+  app.innerHTML = html;
+  wireBackBtn();
+}
+
+/* ---------- 나만의 단어 추가 ---------- */
+function renderAddWord(){
+  botnav.classList.add('hidden');
+  app.innerHTML = backBtn() + topbar() + `
+    <div class="hello">
+      <img src="${IMG.study}" alt="" style="width:70px">
+      <div><h2>➕ ${L.addWord}</h2>
+      <div class="sub">${L.addWordSub}</div></div>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>${L.addWordKoLabel}</label>
+        <input type="text" id="newKo" class="kr" placeholder="예: 사랑">
+      </div>
+      <div class="field">
+        <label>${L.addWordMeanLabel}</label>
+        <input type="text" id="newMean">
+      </div>
+      <div id="addWordError" class="field-error hidden"></div>
+      ${!currentUserEmail ? `<div class="field-error" style="color:var(--gold)">${L.addWordDemoNotice}</div>` : ""}
+      <button class="btn" id="saveWordBtn" style="margin-top:6px">${L.addWordSave}</button>
+      <button class="btn ghost" id="cancelWordBtn" style="margin-top:10px">${L.addWordCancel}</button>
+    </div>`;
+  wireBackBtn();
+  $('#saveWordBtn').onclick = saveNewWord;
+  $('#cancelWordBtn').onclick = renderHome;
+}
+
+function saveNewWord(){
+  const ko = $('#newKo').value.trim();
+  const mean = $('#newMean').value.trim();
+  const errEl = $('#addWordError');
+  if(!ko || !mean){
+    errEl.textContent = L.addWordEmptyError;
+    errEl.classList.remove('hidden');
+    return;
+  }
+  const dup = student.words.some(w=>w.ko===ko);
+  if(dup){
+    errEl.textContent = L.addWordDuplicateError;
+    errEl.classList.remove('hidden');
+    return;
+  }
+  const today = new Date().toISOString().slice(0,10);
+  const newId = student.words.length
+    ? Math.max(...student.words.map(w=>w.id)) + 1
+    : 0;
+  const newWord = {
+    id:newId, date:today, ko, pron:"", mean, type:"word",
+    source:"custom", correctStreak:0, seen:0, totalCorrect:0, status:"new"
+  };
+  student.words.push(newWord);
+
+  if(currentUserEmail){
+    const ref = window.fb.doc(window.fb.db, 'students', currentUserEmail);
+    window.fb.updateDoc(ref, {
+      customWords: window.fb.arrayUnion({id:newId, ko, mean, dateAdded:today})
+    }).catch(e=>console.error('커스텀 단어 저장 실패', e));
+  }
+  renderHome();
 }
 
 /* ---------- 도움말 ---------- */
@@ -893,6 +1027,7 @@ botnav.querySelectorAll('button').forEach(b=>{
     const nav=b.dataset.nav;
     if(nav==="home") renderHome();
     else if(nav==="words") renderWords();
+    else if(nav==="learned") renderLearned();
     else if(nav==="known") renderKnown();
     else if(nav==="help") renderHelp();
   };
