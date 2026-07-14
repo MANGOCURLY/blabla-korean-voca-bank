@@ -12,11 +12,13 @@ const IMG = {
   study: "images/study.png",
   surprised: "images/surprised.png",
   together: "images/together.png",
-  upset: "images/upset.png",
 };
 
+/* 커스텀 단어 색상 팔레트 (gold / chili / leaf / violet / blue) */
+const WORD_COLORS = ["#E8B04B","#F2685E","#4FBE6C","#8A7FFF","#5BA8E5"];
+
 /* =====================================================================
-   Blabla Korean · Voca Bank — mockup logic
+   Blabla Korea · Voca Bank — mockup logic
    - 다국어 UI (fr / en)
    - 구글 로그인 자리 (지금은 데모: 학생 선택)
    - 날짜별 단어 보기 / 랜덤 연습 / 머니뱅크 / 아는단어·마스터 / 복습
@@ -32,14 +34,14 @@ const T = {
     demoHint: "Démo — choisis un élève pour tester :",
     hi: "Salut",
     welcome: "Prêt à gagner des wons ?",
-    statLearned: "Appris", statKnown: "Connus", statStreak: "Série record",
+    statLearned: "Appris", statKnown: "Mémorisés", statStreak: "Série record",
     play: "Commencer l'entraînement",
     playSub: "10 questions · mots + phrases",
     review: "Réviser les mots du jour",
     reviewSub: "Ce qui revient aujourd'hui",
     words: "Mes mots par date",
     wordsSub: "Tout ce qu'on a appris",
-    knownMenu: "Mots connus & maîtrisés",
+    knownMenu: "Mots mémorisés & maîtrisés",
     knownSub: "Ta collection",
     todayReview: "à réviser",
     sectionPlay: "S'entraîner", sectionBrowse: "Parcourir",
@@ -53,14 +55,14 @@ const T = {
     resultTitle: (n)=> n>=9?"Champion piquant !": n>=7?"Bien joué !": n>=5?"Pas mal !":"Continue !",
     resultScore: (c,t)=>`${c} bonnes réponses sur ${t}`,
     earned: "gagnés",
-    known: "Connus", master: "Maîtrisés", learning: "En cours",
-    emptyKnown: "Pas encore de mot connu. Réponds juste 3 fois de suite à un mot pour le débloquer !",
-    navHome:"Accueil", navWords:"Mots", navLearned:"Appris", navKnown:"Connus", navHelp:"Aide",
+    known: "Mémorisés", master: "Maîtrisés", learning: "En cours",
+    emptyKnown: "Pas encore de mot mémorisé. Réponds juste 3 fois de suite à un mot pour le débloquer !",
+    navHome:"Accueil", navWords:"Mots", navLearned:"Appris", navKnown:"Mémorisés", navHelp:"Aide",
     helpTitle:"Comment ça marche",
     help: [
       ["💰","La banque de wons","+100 wons par bonne réponse, −50 par erreur. Ta banque ne descend jamais sous 0."],
       ["🔥","Les séries","Enchaîne les bonnes réponses pour faire monter ta série et voir le piment danser."],
-      ["🧠","Mots connus","3 bonnes réponses de suite = mot connu. Continue de le revoir pour le maîtriser."],
+      ["🧠","Mots mémorisés","3 bonnes réponses de suite = mot mémorisé. Continue de le revoir pour le maîtriser."],
       ["🧠","Révision espacée","Chaque jour, on te ressort les mots au bon moment : 1, 3, 7, 14 puis 30 jours."],
     ],
     switchLang:"English",
@@ -68,7 +70,7 @@ const T = {
     share: "Partager le résultat",
     logout: "Se déconnecter",
     logoutConfirm: "Tu veux vraiment te déconnecter ?",
-    notRegistered: "Tu n'es pas dans la liste des élèves. Contacte Blabla Korean.",
+    notRegistered: "Tu n'es pas dans la liste des élèves. Contacte Blabla Korea.",
     listLoadError: "Impossible de charger la liste des élèves. Vérifie ta connexion et rafraîchis la page (ou réessaie dans quelques minutes).",
     vocabLoading: "Chargement de tes mots…",
     vocabNotReady: "Ta liste de mots n'est pas encore prête. Contacte ton professeur.",
@@ -95,6 +97,12 @@ const T = {
     myWordsSub: "Le vocabulaire que tu as ajouté toi-même",
     emptyMyWords: "Tu n'as pas encore ajouté de mot. Clique sur \"Ajouter un mot\" pour commencer !",
     allDates: "Toutes les dates",
+    editWord: "Modifier le mot",
+    editWordSub: "Change le mot, le sens ou la couleur",
+    colorLabel: "Couleur (pour t'y retrouver)",
+    moveUp: "Monter",
+    moveDown: "Descendre",
+    rightsNote: "Tous droits réservés. Blabla Korea est une marque de Jonghyuk Lee.",
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
@@ -104,14 +112,14 @@ const T = {
     demoHint: "Demo — pick a student to try it:",
     hi: "Hi",
     welcome: "Ready to earn some won?",
-    statLearned: "Learned", statKnown: "Known", statStreak: "Best streak",
+    statLearned: "Learned", statKnown: "Memorized", statStreak: "Best streak",
     play: "Start practice",
     playSub: "10 questions · words + sentences",
     review: "Review today's words",
     reviewSub: "What's due today",
     words: "My words by date",
     wordsSub: "Everything we've learned",
-    knownMenu: "Known & mastered words",
+    knownMenu: "Memorized & mastered words",
     knownSub: "Your collection",
     todayReview: "due",
     sectionPlay: "Practice", sectionBrowse: "Browse",
@@ -125,14 +133,14 @@ const T = {
     resultTitle: (n)=> n>=9?"Spicy champion!": n>=7?"Well done!": n>=5?"Not bad!":"Keep going!",
     resultScore: (c,t)=>`${c} correct out of ${t}`,
     earned: "earned",
-    known: "Known", master: "Mastered", learning: "Learning",
-    emptyKnown: "No known words yet. Answer a word right 3 times in a row to unlock it!",
-    navHome:"Home", navWords:"Words", navLearned:"Learned", navKnown:"Known", navHelp:"Help",
+    known: "Memorized", master: "Mastered", learning: "Learning",
+    emptyKnown: "No memorized words yet. Answer a word right 3 times in a row to unlock it!",
+    navHome:"Home", navWords:"Words", navLearned:"Learned", navKnown:"Memorized", navHelp:"Help",
     helpTitle:"How it works",
     help: [
       ["💰","The won bank","+100 won per correct answer, −50 per miss. Your bank never drops below 0."],
       ["🔥","Streaks","Chain correct answers to build your streak and watch the chili dance."],
-      ["🧠","Known words","3 correct in a row = a known word. Keep reviewing to master it."],
+      ["🧠","Memorized words","3 correct in a row = a memorized word. Keep reviewing to master it."],
       ["🧠","Spaced review","Each day we resurface words at the right time: 1, 3, 7, 14, then 30 days."],
     ],
     switchLang:"Français",
@@ -140,7 +148,7 @@ const T = {
     share: "Share result",
     logout: "Log out",
     logoutConfirm: "Are you sure you want to log out?",
-    notRegistered: "You're not on the registered student list. Please contact Blabla Korean.",
+    notRegistered: "You're not on the registered student list. Please contact Blabla Korea.",
     listLoadError: "Couldn't load the student list. Check your connection and refresh the page (or try again in a few minutes).",
     vocabLoading: "Loading your words…",
     vocabNotReady: "Your word list isn't ready yet. Please contact your teacher.",
@@ -167,6 +175,12 @@ const T = {
     myWordsSub: "Vocabulary you've added yourself",
     emptyMyWords: "You haven't added any words yet. Tap \"Add a word\" to get started!",
     allDates: "All dates",
+    editWord: "Edit word",
+    editWordSub: "Change the word, meaning or color",
+    colorLabel: "Color (to help you spot it)",
+    moveUp: "Move up",
+    moveDown: "Move down",
+    rightsNote: "All rights reserved. Blabla Korea is a trademark of Jonghyuk Lee.",
   }
 };
 
@@ -400,11 +414,11 @@ async function restoreProgress(email){
     // 학생이 직접 추가한 단어 병합
     const customWords = data.customWords || [];
     let nextId = student.words.length ? Math.max(...student.words.map(w=>w.id)) + 1 : 0;
-    customWords.forEach(cw=>{
+    customWords.forEach((cw, i)=>{
       const p = srs[cw.ko] || {};
       student.words.push({
         id: nextId++, date: cw.dateAdded, ko: cw.ko, pron:"", mean: cw.mean, type:"word",
-        source:"custom",
+        source:"custom", color: cw.color || "", order: (cw.order ?? i),
         correctStreak: p.correctStreak||0, totalCorrect: p.totalCorrect||0,
         seen: p.seen||0, status: p.status||"new"
       });
@@ -413,6 +427,17 @@ async function restoreProgress(email){
     bank = 100;
     await window.fb.setDoc(ref, {points:100, srsProgress:{}, customWords:[], lastUpdated: window.fb.serverTimestamp()});
   }
+}
+
+function persistCustomWords(){
+  if(!currentUserEmail) return; // 데모 모드는 저장 안 함
+  const customWords = student.words
+    .filter(w=>w.source==='custom')
+    .sort((a,b)=>(a.order??0)-(b.order??0))
+    .map(w=>({id:w.id, ko:w.ko, mean:w.mean, dateAdded:w.date, color:w.color||"", order:w.order??0}));
+  const ref = window.fb.doc(window.fb.db, 'students', currentUserEmail);
+  window.fb.updateDoc(ref, {customWords, lastUpdated: window.fb.serverTimestamp()})
+    .catch(e=>console.error('커스텀 단어 저장 실패', e));
 }
 
 function persistProgress(){
@@ -520,7 +545,7 @@ function wireBackBtn(){
 function topbar(){
   return `<div class="topbar">
     <div class="brand"><span class="dot">🌶️</span>
-      <div>Voca Bank<small>Blabla Korean</small></div></div>
+      <div>Voca Bank<small>Blabla Korea</small></div></div>
     ${bankChip()}
   </div>`;
 }
@@ -546,7 +571,7 @@ function renderLogin(){
     <img src="${IMG.study}" alt="">
     <div class="brand" style="justify-content:center;margin-bottom:4px">
       <span class="dot" style="font-size:1.1rem">🌶️</span>
-      <small style="color:var(--gold);letter-spacing:2px">BLABLA KOREAN</small>
+      <small style="color:var(--gold);letter-spacing:2px">BLABLA KOREA</small>
     </div>
     <h1>${Lx.loginTitle[0]}<br><span>${Lx.loginTitle[1]}</span></h1>
     <p>${Lx.loginDesc}</p>
@@ -671,7 +696,7 @@ function renderHome(){
   $('#wordsBtn').onclick = ()=>renderWords();
   $('#knownBtn').onclick = renderKnown;
   $('#myWordsBtn').onclick = renderMyWords;
-  $('#addWordBtn').onclick = renderAddWord;
+  $('#addWordBtn').onclick = ()=>renderAddWord();
   $('#statLearned').onclick = renderLearned;
   $('#statKnown').onclick = renderKnown;
 }
@@ -721,16 +746,28 @@ function fmtDate(d){
 }
 
 /* ---------- 단어 행 렌더 (공통) + 삭제 ---------- */
-function wordRowHtml(w){
+function wordRowHtml(w, controls=false){
   const del = (w.source==='custom')
     ? `<button class="word-del" data-del="${w.id}" title="${L.deleteWord}">✕</button>`
     : '';
-  return `<div class="word-row">
+  const ctl = 'background:var(--navy-3);border:1px solid var(--line);border-radius:8px;color:var(--cream-dim);cursor:pointer;padding:3px 7px;line-height:1;font-size:.72rem;font-family:inherit';
+  const move = controls
+    ? `<span style="display:flex;flex-direction:column;gap:3px;flex:none">
+        <button data-move-up="${w.id}" title="${L.moveUp}" style="${ctl}">▲</button>
+        <button data-move-down="${w.id}" title="${L.moveDown}" style="${ctl}">▼</button>
+      </span>`
+    : '';
+  const edit = controls
+    ? `<button data-edit="${w.id}" title="${L.editWord}" style="${ctl};font-size:.9rem;padding:6px 8px;flex:none">✏️</button>`
+    : '';
+  const colorStyle = w.color ? ` style="border-left:4px solid ${w.color}"` : '';
+  return `<div class="word-row"${colorStyle}>
+    ${move}
     <span class="ko kr">${w.ko}</span>
     <span class="mean">${w.mean}</span>
     ${w.source==='custom' ? `<span class="tag custom">${L.tagCustom}</span>` : ''}
     <span class="tag ${statusTag(w).cls}">${statusTag(w).txt}</span>
-    ${del}
+    ${edit}${del}
   </div>`;
 }
 
@@ -748,14 +785,8 @@ function deleteCustomWord(id, reRenderFn){
   if(!w) return;
   if(!confirm(L.deleteWordConfirm)) return;
 
-  if(currentUserEmail){
-    const ref = window.fb.doc(window.fb.db, 'students', currentUserEmail);
-    window.fb.updateDoc(ref, {
-      customWords: window.fb.arrayRemove({id:w.id, ko:w.ko, mean:w.mean, dateAdded:w.date})
-    }).catch(e=>console.error('커스텀 단어 삭제 실패', e));
-  }
-
   student.words = student.words.filter(x=>x.id!==id);
+  persistCustomWords();
   if(reRenderFn) reRenderFn();
 }
 
@@ -808,7 +839,7 @@ function renderLearned(){
 /* ---------- 내가 추가한 단어만 모아보기 ---------- */
 function renderMyWords(){
   botnav.classList.add('hidden');
-  const mine = student.words.filter(w=>w.source==='custom');
+  const mine = student.words.filter(w=>w.source==='custom').sort((a,b)=>(a.order??0)-(b.order??0));
   let html = backBtn() + topbar() + `<div class="hello">
       <img src="${IMG.study}" alt="" style="width:70px">
       <div><h2>📝 ${L.myWords}</h2>
@@ -819,22 +850,52 @@ function renderMyWords(){
       <p>${L.emptyMyWords}</p></div>`;
   } else {
     mine.forEach(w=>{
-      html += wordRowHtml(w);
+      html += wordRowHtml(w, true);
     });
   }
   app.innerHTML = html;
   wireBackBtn();
   wireDeleteButtons(renderMyWords);
+  wireMyWordControls(mine);
+}
+
+function wireMyWordControls(mine){
+  app.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.onclick = ()=>renderAddWord(Number(btn.dataset.edit));
+  });
+  const moveWord = (id, dir)=>{
+    const idx = mine.findIndex(w=>w.id===id);
+    const swap = idx + dir;
+    if(idx < 0 || swap < 0 || swap >= mine.length) return;
+    mine.forEach((w,i)=>w.order = i);        // 순서값 정규화 (기존 데이터 호환)
+    mine[idx].order = swap;
+    mine[swap].order = idx;
+    persistCustomWords();
+    renderMyWords();
+  };
+  app.querySelectorAll('[data-move-up]').forEach(btn=>{
+    btn.onclick = ()=>moveWord(Number(btn.dataset.moveUp), -1);
+  });
+  app.querySelectorAll('[data-move-down]').forEach(btn=>{
+    btn.onclick = ()=>moveWord(Number(btn.dataset.moveDown), 1);
+  });
 }
 
 /* ---------- 나만의 단어 추가 ---------- */
-function renderAddWord(){
+function renderAddWord(editId){
   botnav.classList.add('hidden');
+  const editing = (editId != null)
+    ? student.words.find(w=>w.id===editId && w.source==='custom')
+    : null;
+  const selColor = editing?.color || "";
+  const swatch = (c)=>`<button data-color="${c}" style="width:36px;height:36px;border-radius:999px;cursor:pointer;flex:none;
+      border:3px solid ${c===selColor ? 'var(--cream)' : 'var(--line)'};
+      background:${c || 'var(--navy-3)'};color:var(--cream-dim);font-size:.8rem;line-height:1">${c ? '' : '✕'}</button>`;
   app.innerHTML = backBtn() + topbar() + `
     <div class="hello">
       <img src="${IMG.study}" alt="" style="width:70px">
-      <div><h2>➕ ${L.addWord}</h2>
-      <div class="sub">${L.addWordSub}</div></div>
+      <div><h2>${editing ? '✏️ '+L.editWord : '➕ '+L.addWord}</h2>
+      <div class="sub">${editing ? L.editWordSub : L.addWordSub}</div></div>
     </div>
     <div class="card">
       <div class="field">
@@ -845,47 +906,73 @@ function renderAddWord(){
         <label>${L.addWordMeanLabel}</label>
         <input type="text" id="newMean">
       </div>
+      <div class="field">
+        <label>${L.colorLabel}</label>
+        <div id="colorRow" data-sel="${selColor}" style="display:flex;gap:10px;align-items:center">
+          ${swatch("")}${WORD_COLORS.map(swatch).join('')}
+        </div>
+      </div>
       <div id="addWordError" class="field-error hidden"></div>
       ${!currentUserEmail ? `<div class="field-error" style="color:var(--gold)">${L.addWordDemoNotice}</div>` : ""}
       <button class="btn" id="saveWordBtn" style="margin-top:6px">${L.addWordSave}</button>
       <button class="btn ghost" id="cancelWordBtn" style="margin-top:10px">${L.addWordCancel}</button>
     </div>`;
+  if(editing){
+    $('#newKo').value = editing.ko;
+    $('#newMean').value = editing.mean;
+  }
+  const colorRow = $('#colorRow');
+  colorRow.querySelectorAll('[data-color]').forEach(btn=>{
+    btn.onclick = ()=>{
+      colorRow.dataset.sel = btn.dataset.color;
+      colorRow.querySelectorAll('[data-color]').forEach(b=>{
+        b.style.borderColor = (b===btn) ? 'var(--cream)' : 'var(--line)';
+      });
+    };
+  });
   wireBackBtn();
-  $('#saveWordBtn').onclick = saveNewWord;
-  $('#cancelWordBtn').onclick = renderHome;
+  $('#saveWordBtn').onclick = ()=>saveWordForm(editing);
+  $('#cancelWordBtn').onclick = editing ? renderMyWords : renderHome;
 }
 
-function saveNewWord(){
+function saveWordForm(editing){
   const ko = $('#newKo').value.trim();
   const mean = $('#newMean').value.trim();
+  const color = $('#colorRow').dataset.sel || "";
   const errEl = $('#addWordError');
   if(!ko || !mean){
     errEl.textContent = L.addWordEmptyError;
     errEl.classList.remove('hidden');
     return;
   }
-  const dup = student.words.some(w=>w.ko===ko);
+  const dup = student.words.some(w=>w.ko===ko && w!==editing);
   if(dup){
     errEl.textContent = L.addWordDuplicateError;
     errEl.classList.remove('hidden');
     return;
   }
+
+  if(editing){
+    editing.ko = ko;
+    editing.mean = mean;
+    editing.color = color;
+    persistCustomWords();
+    persistProgress(); // srsProgress가 단어 텍스트를 키로 쓰므로, 재저장하면 기록이 새 키로 이관됨
+    renderMyWords();
+    return;
+  }
+
   const today = new Date().toISOString().slice(0,10);
   const newId = student.words.length
     ? Math.max(...student.words.map(w=>w.id)) + 1
     : 0;
   const newWord = {
     id:newId, date:today, ko, pron:"", mean, type:"word",
-    source:"custom", correctStreak:0, seen:0, totalCorrect:0, status:"new"
+    source:"custom", color, order: student.words.filter(w=>w.source==='custom').length,
+    correctStreak:0, seen:0, totalCorrect:0, status:"new"
   };
   student.words.push(newWord);
-
-  if(currentUserEmail){
-    const ref = window.fb.doc(window.fb.db, 'students', currentUserEmail);
-    window.fb.updateDoc(ref, {
-      customWords: window.fb.arrayUnion({id:newId, ko, mean, dateAdded:today})
-    }).catch(e=>console.error('커스텀 단어 저장 실패', e));
-  }
+  persistCustomWords();
   renderHome();
 }
 
@@ -903,6 +990,8 @@ function renderHelp(){
   });
   html += `<button class="btn ghost" id="switchLang" style="margin-top:16px">🌐 ${L.switchLang}</button>`;
   html += `<button class="btn chili" id="logoutBtn" style="margin-top:10px">🚪 ${L.logout}</button>`;
+  html += `<div style="text-align:center;color:var(--cream-dim);font-size:.72rem;margin-top:22px;line-height:1.7">
+    © 2026 Blabla Korea · Jonghyuk Lee<br>${L.rightsNote}</div>`;
   app.innerHTML = html;
   wireBackBtn();
   $('#switchLang').onclick = ()=>{ L = (L===T.fr)?T.en:T.fr; renderHelp(); };
