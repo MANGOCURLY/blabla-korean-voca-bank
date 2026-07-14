@@ -94,6 +94,7 @@ const T = {
     myWords: "Mes mots à moi",
     myWordsSub: "Le vocabulaire que tu as ajouté toi-même",
     emptyMyWords: "Tu n'as pas encore ajouté de mot. Clique sur \"Ajouter un mot\" pour commencer !",
+    allDates: "Toutes les dates",
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
@@ -165,6 +166,7 @@ const T = {
     myWords: "My words",
     myWordsSub: "Vocabulary you've added yourself",
     emptyMyWords: "You haven't added any words yet. Tap \"Add a word\" to get started!",
+    allDates: "All dates",
   }
 };
 
@@ -666,7 +668,7 @@ function renderHome(){
   `;
   $('#playBtn').onclick = ()=>startSession(student.words);
   $('#reviewBtn').onclick = ()=>startSession(student.words.filter(w=>w.status!=="master"));
-  $('#wordsBtn').onclick = renderWords;
+  $('#wordsBtn').onclick = ()=>renderWords();
   $('#knownBtn').onclick = renderKnown;
   $('#myWordsBtn').onclick = renderMyWords;
   $('#addWordBtn').onclick = renderAddWord;
@@ -675,16 +677,21 @@ function renderHome(){
 }
 
 /* ---------- 날짜별 단어 ---------- */
-function renderWords(){
+function renderWords(selectedDate = "all"){
   botnav.classList.remove('hidden');
   setNav('words');
   const byDate = {};
   student.words.forEach(w=>{ (byDate[w.date] ||= []).push(w); });
   const dates = Object.keys(byDate).sort().reverse();
+  const shown = selectedDate === "all" ? dates : dates.filter(d=>d===selectedDate);
 
   let html = backBtn() + topbar() + `<h2 style="margin:6px 2px 4px">📖 ${L.words}</h2>
-    <div class="sub" style="color:var(--cream-dim);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>`;
-  dates.forEach(d=>{
+    <div class="sub" style="color:var(--cream-dim);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>
+    <select id="dateFilter" style="width:100%;margin:10px 0 2px;background:var(--navy-3);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:1rem;color:var(--cream);font-family:inherit;cursor:pointer">
+      <option value="all">📅 ${L.allDates}</option>
+      ${dates.map(d=>`<option value="${d}" ${d===selectedDate?'selected':''}>${fmtDate(d)} ${d.split('-')[0]} · ${byDate[d].length}</option>`).join('')}
+    </select>`;
+  shown.forEach(d=>{
     const list = byDate[d];
     html += `<div class="day-block">
       <div class="day-head">📅 ${fmtDate(d)} <span class="count">· ${list.length}</span></div>`;
@@ -695,7 +702,8 @@ function renderWords(){
   });
   app.innerHTML = html;
   wireBackBtn();
-  wireDeleteButtons(renderWords);
+  wireDeleteButtons(()=>renderWords(selectedDate));
+  $('#dateFilter').onchange = (e)=>renderWords(e.target.value);
 }
 function statusTag(w){
   if(w.type==="sentence" && w.status==="new") return {cls:"sentence", txt:L.sentenceTag};
