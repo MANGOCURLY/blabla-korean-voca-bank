@@ -74,6 +74,7 @@ const T = {
     listLoadError: "Impossible de charger la liste des élèves. Vérifie ta connexion et rafraîchis la page (ou réessaie dans quelques minutes).",
     vocabLoading: "Chargement de tes mots…",
     vocabNotReady: "Ta liste de mots n'est pas encore prête. Contacte ton professeur.",
+    progressSaveOff: "Connexion au serveur impossible : ta progression ne sera pas sauvegardée pour l'instant. Rafraîchis la page pour réessayer.",
     pronToggle: "Voir la prononciation",
     inAppWarning: "Connexion Google impossible dans cette appli. Ouvre ce lien dans Chrome ou Safari.",
     copyLink: "Copier le lien",
@@ -152,6 +153,7 @@ const T = {
     listLoadError: "Couldn't load the student list. Check your connection and refresh the page (or try again in a few minutes).",
     vocabLoading: "Loading your words…",
     vocabNotReady: "Your word list isn't ready yet. Please contact your teacher.",
+    progressSaveOff: "Couldn't reach the server: your progress won't be saved right now. Refresh the page to try again.",
     pronToggle: "Show pronunciation",
     inAppWarning: "Google sign-in isn't available in this app. Open this link in Chrome or Safari instead.",
     copyLink: "Copy link",
@@ -264,6 +266,7 @@ let currentUserEmail = null; // Firebase 로그인 이메일 (데모 모드면 n
 let studentWhitelist = [];   // 구글시트에서 불러온 {email,name,lang,sheetTab}[]
 let whitelistLoaded = false; // 명단 로딩 성공 여부 (실패와 "진짜 미등록" 구분용)
 let showPron = false;        // 발음 표시 토글 (세션 전체 공용, 문제별 개별 아님)
+let progressLocked = false;  // Firestore 진도 로딩 실패 시 true → 저장(덮어쓰기) 잠금으로 기존 데이터 보호
 
 const REWARD = 100, PENALTY = 50, KNOWN_STREAK = 3;
 
@@ -315,22 +318,32 @@ async function fetchStudentWhitelist(retries=2){
 /* ---------- 학생별 단어 CSV (구글시트) ---------- */
 const vocabCache = {}; // 세션 동안만 유지, 새로고침하면 다시 fetch
 
-async function fetchStudentVocab(url){
-  const res = await fetch(url);
-  if(!res.ok) throw new Error('단어 CSV fetch 실패: HTTP '+res.status);
-  const text = await res.text();
-  const lines = text.trim().split(/\r?\n/).slice(1); // 헤더(날짜,한국어,발음,뜻,예문,예문뜻,카테고리,품사,타입) 제거
-  const words = [];
-  lines.forEach(line=>{
-    if(!line.trim()) return; // 빈 줄 건너뛰기
-    const cols = parseCsvLine(line);
-    if(cols.length < 9) return; // 컬럼 개수 안 맞으면 건너뛰기
-    const [date, ko, pron, mean, example, exampleMean, category, pos, type] = cols;
-    if(!ko || !mean) return; // 핵심 필드 비어있으면 건너뛰기
-    if(type !== 'word' && type !== 'sentence') return; // 타입 값 이상하면 건너뛰기
-    words.push({date, ko, pron, mean, example, exampleMean, category, pos, type});
-  });
-  return words;
+async function fetchStudentVocab(url, retries=2){
+  // 구글이 가끔 429/5xx를 돌려주므로 명단과 동일하게 재시도(백오프)로 방어
+  let lastErr;
+  for(let attempt=0; attempt<=retries; attempt++){
+    try{
+      const res = await fetch(url, {cache:'no-store'});
+      if(!res.ok) throw new Error('단어 CSV fetch 실패: HTTP '+res.status);
+      const text = await res.text();
+      const lines = text.trim().split(/\r?\n/).slice(1); // 헤더(날짜,한국어,발음,뜻,예문,예문뜻,카테고리,품사,타입) 제거
+      const words = [];
+      lines.forEach(line=>{
+        if(!line.trim()) return; // 빈 줄 건너뛰기
+        const cols = parseCsvLine(line);
+        if(cols.length < 9) return; // 컬럼 개수 안 맞으면 건너뛰기
+        const [date, ko, pron, mean, example, exampleMean, category, pos, type] = cols;
+        if(!ko || !mean) return; // 핵심 필드 비어있으면 건너뛰기
+        if(type !== 'word' && type !== 'sentence') return; // 타입 값 이상하면 건너뛰기
+        words.push({date, ko, pron, mean, example, exampleMean, category, pos, type});
+      });
+      return words;
+    }catch(e){
+      lastErr = e;
+      if(attempt < retries) await new Promise(r=>setTimeout(r, 600*(attempt+1))); // 0.6s, 1.2s 백오프
+    }
+  }
+  throw lastErr;
 }
 
 async function getStudentVocab(row){
@@ -430,7 +443,7 @@ async function restoreProgress(email){
 }
 
 function persistCustomWords(){
-  if(!currentUserEmail) return; // 데모 모드는 저장 안 함
+  if(!currentUserEmail || progressLocked) return; // 데모 모드/진도 로딩 실패 시 저장 안 함(기존 데이터 보호)
   const customWords = student.words
     .filter(w=>w.source==='custom')
     .sort((a,b)=>(a.order??0)-(b.order??0))
@@ -441,7 +454,7 @@ function persistCustomWords(){
 }
 
 function persistProgress(){
-  if(!currentUserEmail) return; // 데모 모드는 저장 안 함
+  if(!currentUserEmail || progressLocked) return; // 데모 모드/진도 로딩 실패 시 저장 안 함(기존 데이터 보호)
   const srsProgress = {};
   student.words.forEach(w=>{
     srsProgress[w.ko] = {correctStreak:w.correctStreak, totalCorrect:w.totalCorrect, seen:w.seen, status:w.status};
@@ -476,15 +489,30 @@ async function handleLoginSuccess(email){
   currentUserEmail = email;
   const lang = (row.lang||'fr').toLowerCase();
   renderVocabLoading(lang);
+  progressLocked = false;
+
+  // ── 1단계: 단어 CSV(구글시트) 불러오기 ──
+  // 여기서 실패하면 = 진짜로 단어가 준비 안 됨 → "단어 준비 안 됨" 화면
+  let words;
   try{
-    const words = await getStudentVocab(row);
-    setupStudent(row, words, lang);
-    await restoreProgress(email);
-    renderHome();
+    words = await getStudentVocab(row);
   } catch(e){
-    console.error('단어 데이터 로딩 실패', e);
+    console.error('① 단어 CSV 로딩 실패 (구글시트/CSV 링크 확인 필요):', e);
     renderVocabNotReady(lang);
+    return;
   }
+  setupStudent(row, words, lang);
+
+  // ── 2단계: Firestore에서 포인트/진도 불러오기 ──
+  // 여기서 실패하면 = 서버 문제일 뿐 단어는 멀쩡. 앱은 열되 저장은 잠가서 기존 데이터 보호
+  try{
+    await restoreProgress(email);
+  } catch(e){
+    console.error('② 진도 불러오기 실패 (Firestore 문제 — 앱은 열지만 저장을 잠급니다):', e);
+    progressLocked = true;
+    bank = 0; // 실제 저장은 잠겨 있으므로 화면 표시만 0. 기존 데이터는 덮어쓰지 않음
+  }
+  renderHome();
 }
 
 /* ---------- 로그아웃 ---------- */
@@ -643,6 +671,7 @@ function renderHome(){
   setNav('home');
   const s = stats();
   app.innerHTML = topbar() + `
+    ${progressLocked ? `<div class="save-warning">⚠️ ${L.progressSaveOff}</div>` : ''}
     <div class="hello">
       <img src="${IMG.excited}" alt="">
       <div>

@@ -68,6 +68,10 @@ body{
 
 .hidden{display:none!important}
 
+/* 진도 저장 잠금(서버 연결 실패) 안내 배너 */
+.save-warning{background:rgba(229,55,43,.12);border:1px solid rgba(242,104,94,.4);color:var(--chili-soft);
+  border-radius:12px;padding:11px 14px;font-size:.82rem;line-height:1.5;margin-bottom:14px}
+
 /* ---------- login ---------- */
 .login{min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
 .login img{width:190px;filter:drop-shadow(0 12px 22px rgba(0,0,0,.45));animation:float 4s ease-in-out infinite}
@@ -124,8 +128,8 @@ body{
 .day-head .count{font-size:.72rem;color:var(--cream-dim);font-weight:600}
 .word-row{display:flex;align-items:center;gap:12px;background:var(--navy-2);border:1px solid var(--line);
   border-radius:12px;padding:12px 14px;margin-bottom:7px}
-.word-row .ko{font-weight:800;font-size:1.05rem}
-.word-row .mean{color:var(--cream-dim);flex:1;font-size:.9rem}
+.word-row .ko{font-weight:800;font-size:1.05rem;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.word-row .mean{color:var(--cream-dim);flex:1;min-width:0;font-size:.9rem;overflow-wrap:anywhere;word-break:break-word}
 .word-row .tag{font-size:.62rem;padding:3px 8px;border-radius:999px;flex:none;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .tag.new{background:rgba(79,190,108,.15);color:var(--leaf-soft)}
 .tag.known{background:rgba(232,176,75,.15);color:var(--gold)}
@@ -210,6 +214,13 @@ body{
 @media(max-width:400px){
   .prompt .pword{font-size:1.9rem}
   .login img{width:150px}
+}
+
+/* 좁은 화면(모바일)에서는 단어 줄을 세로로 쌓아 긴 텍스트가 한 글자씩 떨어지지 않게 함 */
+@media(max-width:560px){
+  .word-row{flex-wrap:wrap;align-items:flex-start}
+  .word-row .ko{flex:1 1 100%}
+  .word-row .mean{flex:1 1 100%}
 }
 </style>
 </head>
