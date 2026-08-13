@@ -35,31 +35,60 @@ const T = {
     hi: "Salut",
     welcome: "Prêt à gagner des wons ?",
     statLearned: "Appris", statKnown: "Mémorisés", statStreak: "Série record",
-    play: "Commencer l'entraînement",
-    playSub: "10 questions · mots + phrases",
-    review: "Réviser les mots du jour",
-    reviewSub: "Ce qui revient aujourd'hui",
+    play: "Prendre le train 🚂",
+    playSub: "10 gares · 2 choix · 3 vies",
+    review: "Réviser mes mots 🃏",
+    reviewSub: "Cartes-mémo · sans score, sans stress",
     words: "Mes mots par date",
     wordsSub: "Tout ce qu'on a appris",
     knownMenu: "Mots mémorisés & maîtrisés",
     knownSub: "Ta collection",
     todayReview: "à réviser",
     sectionPlay: "S'entraîner", sectionBrowse: "Parcourir",
-    qCount: (a,b)=>`Question ${a} / ${b}`,
-    promptKo: "Que veut dire…", promptMean: "Comment dit-on…", promptSent: "Traduis la phrase",
+    qCount: (a,b)=>`Gare ${a} / ${b}`,
+    promptKo: "Que veut dire…", promptMean: "Comment dit-on…",
     correct: "Bravo !", wrong: "Aïe, ça pique !",
     answerWas: "La bonne réponse :",
-    more: "10 questions de plus",
-    next: "Suivant →",
+    more: "Reprendre le train 🚂",
+    next: "Continuer →",
     home: "Retour à l'accueil",
     resultTitle: (n)=> n>=9?"Champion piquant !": n>=7?"Bien joué !": n>=5?"Pas mal !":"Continue !",
     resultScore: (c,t)=>`${c} bonnes réponses sur ${t}`,
     earned: "gagnés",
+    /* 🚂 기차 게임 */
+    livesLabel: "Vies",
+    trainSafe: "Le train passe ! 🚂",
+    trainCrash: "Le train déraille ! 💥",
+    gameOverTitle: "Train détruit !",
+    gameOverSub: "Tu n'as plus de vies. Le voyage s'arrête ici.",
+    gameOverBtn: "Voir le résultat →",
+    clearTitle: "Terminus atteint ! 🚩",
+    stationsPassed: (n)=>`${n} gares franchies`,
+    livesLeft: (n)=>`${n} vie${n>1?'s':''} restante${n>1?'s':''}`,
+    notEnoughTitle: "Pas assez de mots",
+    notEnoughSub: "Il te faut au moins 2 mots (les phrases ne comptent pas) pour prendre le train. Ajoute des mots ou attends le prochain cours !",
+    /* 🃏 cartes-mémo */
+    reviewTitle: "Cartes-mémo",
+    flipHint: "Touche la carte 👆",
+    sideKo: "Coréen", sideMean: "Français",
+    cardCount: (a,b)=>`Carte ${a} / ${b}`,
+    prevCard: "Précédent", nextCard: "Suivant",
+    shuffleCards: "🔀 Mélanger",
+    reviewOnlyDue: "À réviser seulement",
+    reviewAllWords: "Tous mes mots",
+    reviewDoneTitle: "Révision terminée ! 🎉",
+    reviewDoneSub: "Tu as parcouru toutes tes cartes. Prêt à monter dans le train ?",
+    reviewAgain: "🔁 Revoir les cartes",
+    goTrain: "🚂 Jouer au train",
+    reviewEmptyTitle: "Rien à réviser",
+    reviewEmptySub: "Aucun mot à réviser pour l'instant. Ajoute des mots ou attends le prochain cours !",
     known: "Mémorisés", master: "Maîtrisés", learning: "En cours",
     emptyKnown: "Pas encore de mot mémorisé. Réponds juste 3 fois de suite à un mot pour le débloquer !",
     navHome:"Accueil", navWords:"Mots", navLearned:"Appris", navKnown:"Mémorisés", navHelp:"Aide",
     helpTitle:"Comment ça marche",
     help: [
+      ["🚂","Le jeu du train","2 choix par gare. Bonne réponse : le train passe. Mauvaise réponse : boum ! Tu perds un cœur ❤️. À 0 cœur, le voyage s'arrête. Seuls les mots sont posés en question, jamais les phrases."],
+      ["🃏","Les cartes-mémo","Le mode révision, sans score ni cœur : touche la carte pour retourner le mot et voir le sens. Prends ton temps, rien n'est compté."],
       ["💰","La banque de wons","+100 wons par bonne réponse, −50 par erreur. Ta banque ne descend jamais sous 0."],
       ["🔥","Les séries","Enchaîne les bonnes réponses pour faire monter ta série et voir le piment danser."],
       ["🧠","Mots mémorisés","3 bonnes réponses de suite = mot mémorisé. Continue de le revoir pour le maîtriser."],
@@ -114,31 +143,60 @@ const T = {
     hi: "Hi",
     welcome: "Ready to earn some won?",
     statLearned: "Learned", statKnown: "Memorized", statStreak: "Best streak",
-    play: "Start practice",
-    playSub: "10 questions · words + sentences",
-    review: "Review today's words",
-    reviewSub: "What's due today",
+    play: "Board the train 🚂",
+    playSub: "10 stations · 2 choices · 3 lives",
+    review: "Review my words 🃏",
+    reviewSub: "Flashcards · no score, no stress",
     words: "My words by date",
     wordsSub: "Everything we've learned",
     knownMenu: "Memorized & mastered words",
     knownSub: "Your collection",
     todayReview: "due",
     sectionPlay: "Practice", sectionBrowse: "Browse",
-    qCount: (a,b)=>`Question ${a} / ${b}`,
-    promptKo: "What does this mean…", promptMean: "How do you say…", promptSent: "Translate the sentence",
+    qCount: (a,b)=>`Station ${a} / ${b}`,
+    promptKo: "What does this mean…", promptMean: "How do you say…",
     correct: "Nice!", wrong: "Ouch, spicy!",
     answerWas: "Correct answer:",
-    more: "10 more questions",
-    next: "Next →",
+    more: "Ride again 🚂",
+    next: "Continue →",
     home: "Back to home",
     resultTitle: (n)=> n>=9?"Spicy champion!": n>=7?"Well done!": n>=5?"Not bad!":"Keep going!",
     resultScore: (c,t)=>`${c} correct out of ${t}`,
     earned: "earned",
+    /* 🚂 train game */
+    livesLabel: "Lives",
+    trainSafe: "The train made it! 🚂",
+    trainCrash: "The train crashed! 💥",
+    gameOverTitle: "Train wrecked!",
+    gameOverSub: "You're out of lives. The journey ends here.",
+    gameOverBtn: "See result →",
+    clearTitle: "Final stop reached! 🚩",
+    stationsPassed: (n)=>`${n} station${n===1?'':'s'} cleared`,
+    livesLeft: (n)=>`${n} ${n===1?'life':'lives'} left`,
+    notEnoughTitle: "Not enough words",
+    notEnoughSub: "You need at least 2 words (sentences don't count) to ride the train. Add some words or wait for your next class!",
+    /* 🃏 flashcards */
+    reviewTitle: "Flashcards",
+    flipHint: "Tap the card 👆",
+    sideKo: "Korean", sideMean: "English",
+    cardCount: (a,b)=>`Card ${a} / ${b}`,
+    prevCard: "Previous", nextCard: "Next",
+    shuffleCards: "🔀 Shuffle",
+    reviewOnlyDue: "Due only",
+    reviewAllWords: "All my words",
+    reviewDoneTitle: "Review complete! 🎉",
+    reviewDoneSub: "You've been through every card. Ready to board the train?",
+    reviewAgain: "🔁 Review again",
+    goTrain: "🚂 Play the train game",
+    reviewEmptyTitle: "Nothing to review",
+    reviewEmptySub: "No words to review right now. Add some words or wait for your next class!",
     known: "Memorized", master: "Mastered", learning: "Learning",
     emptyKnown: "No memorized words yet. Answer a word right 3 times in a row to unlock it!",
     navHome:"Home", navWords:"Words", navLearned:"Learned", navKnown:"Memorized", navHelp:"Help",
     helpTitle:"How it works",
     help: [
+      ["🚂","The train game","2 choices per station. Right answer: the train passes. Wrong answer: boom! You lose a heart ❤️. At 0 hearts the ride is over. Only words are quizzed — never sentences."],
+      ["🃏","Flashcards","The review mode, with no score and no hearts: tap a card to flip the word and see its meaning. Take your time, nothing is counted."],
       ["💰","The won bank","+100 won per correct answer, −50 per miss. Your bank never drops below 0."],
       ["🔥","Streaks","Chain correct answers to build your streak and watch the chili dance."],
       ["🧠","Memorized words","3 correct in a row = a memorized word. Keep reviewing to master it."],
@@ -259,7 +317,8 @@ function detectInitialLang(){
   }catch(e){ return 'fr'; }
 }
 let loginLang = detectInitialLang();  // 로그인 화면 전용 미리보기 언어 (로그인 전에만 사용)
-let session = null;   // active quiz session
+let session = null;   // 🚂 기차 게임 세션
+let review  = null;   // 🃏 플래시카드 복습 세션
 let bank = 0;
 let bestStreak = 0;
 let currentUserEmail = null; // Firebase 로그인 이메일 (데모 모드면 null)
@@ -657,7 +716,8 @@ function renderLogin(){
 /* ---------- 오늘 복습 예정 개수 (SRS 데모) ---------- */
 function dueCount(){
   // 데모: 아직 안 본 것 + status가 new/learning인 것을 "복습 대상"으로
-  return student.words.filter(w=>w.status!=="master").length;
+  // (문장은 퀴즈에 출제하지 않으므로 카운트에서 제외)
+  return student.words.filter(w=>w.status!=="master" && w.type!=="sentence").length;
 }
 function stats(){
   const learned = student.words.filter(w=>w.totalCorrect>0).length;
@@ -668,6 +728,8 @@ function stats(){
 /* ---------- 홈 ---------- */
 function renderHome(){
   botnav.classList.remove('hidden');
+  document.onkeydown = null;   // 복습 카드 키보드 핸들러 해제
+  review = null;
   setNav('home');
   const s = stats();
   app.innerHTML = topbar() + `
@@ -688,12 +750,12 @@ function renderHome(){
 
     <div class="section-title">${L.sectionPlay}</div>
     <button class="menu-btn" id="playBtn" style="border-color:var(--gold)">
-      <span class="emoji">🎯</span>
+      <span class="emoji">🚂</span>
       <span class="mtext"><b>${L.play}</b><span>${L.playSub}</span></span>
       <span class="arrow">→</span>
     </button>
     <button class="menu-btn" id="reviewBtn">
-      <span class="emoji">🧠</span>
+      <span class="emoji">🃏</span>
       <span class="mtext"><b>${L.review}</b><span>${L.reviewSub}</span></span>
       <span class="badge">${dueCount()} ${L.todayReview}</span>
     </button>
@@ -721,7 +783,7 @@ function renderHome(){
     </button>
   `;
   $('#playBtn').onclick = ()=>startSession(student.words);
-  $('#reviewBtn').onclick = ()=>startSession(student.words.filter(w=>w.status!=="master"));
+  $('#reviewBtn').onclick = ()=>startReview('due');
   $('#wordsBtn').onclick = ()=>renderWords();
   $('#knownBtn').onclick = renderKnown;
   $('#myWordsBtn').onclick = renderMyWords;
@@ -1028,50 +1090,213 @@ function renderHelp(){
 }
 
 /* =====================================================================
-   퀴즈 세션
+   🃏 단어 복습 (플래시카드)
+   - 점수·하트·머니뱅크와 무관한 순수 복습 모드
+   - 문장은 제외하고 단어만 (기차 게임과 동일 기준)
    ===================================================================== */
+
+function reviewPool(mode){
+  const words = quizPool(student.words);
+  if(mode==='all') return words;
+  const due = words.filter(w=>w.status!=="master");
+  return due.length ? due : words;   // 전부 마스터면 그냥 전체 보여주기
+}
+
+function startReview(mode='due'){
+  const cards = shuffle(reviewPool(mode));
+  if(!cards.length){ renderReviewEmpty(); return; }
+  review = { cards, i:0, flipped:false, mode, seen:new Set([0]) };
+  renderReview();
+}
+
+function renderReviewEmpty(){
+  botnav.classList.add('hidden');
+  review = null;
+  app.innerHTML = backBtn() + topbar() + `
+    <div class="result">
+      <img src="${IMG.surprised}" alt="">
+      <h2>${L.reviewEmptyTitle}</h2>
+      <div class="score" style="max-width:380px;margin:0 auto 18px">${L.reviewEmptySub}</div>
+      <div class="btn-row" style="flex-direction:column">
+        <button class="btn" id="addNowBtn">➕ ${L.addWord}</button>
+        <button class="btn secondary" id="homeBtn">${L.home}</button>
+      </div>
+    </div>`;
+  wireBackBtn();
+  $('#addNowBtn').onclick = ()=>renderAddWord();
+  $('#homeBtn').onclick = ()=>renderHome();
+}
+
+function renderReview(){
+  botnav.classList.add('hidden');
+  const r = review, w = r.cards[r.i];
+  r.flipped = false;
+  r.seen.add(r.i);
+
+  const st = statusTag(w);
+  const dots = r.cards.map((_,i)=>
+    `<i class="${i===r.i?'now':(r.seen.has(i)?'seen':'')}"></i>`).join('');
+
+  app.innerHTML = topbar() + `
+    <div class="quiz-top">
+      <button class="btn ghost" style="width:auto;padding:8px 12px" id="quitBtn">←</button>
+      <div class="progress"><i style="width:${((r.i+1)/r.cards.length)*100}%"></i></div>
+      <button class="btn ghost" style="width:auto;padding:8px 12px;font-size:.8rem" id="shuffleBtn">🔀</button>
+    </div>
+    <div class="q-count">🃏 ${L.reviewTitle} · ${L.cardCount(r.i+1, r.cards.length)}</div>
+
+    <div class="flash-wrap">
+      <div class="flash" id="flash">
+        <div class="face front">
+          <span class="fstatus tag ${st.cls}">${st.txt}</span>
+          <div class="fside">${L.sideKo}</div>
+          <div class="ftext kr ${w.ko.length>12?'long':''}">${w.ko}</div>
+          ${w.pron ? `<div class="fpron">${w.pron}</div>` : ``}
+          <div class="fhint">${L.flipHint}</div>
+        </div>
+        <div class="face back">
+          <div class="fside">${L.sideMean}</div>
+          <div class="ftext ${w.mean.length>12?'long':''}">${w.mean}</div>
+          <div class="fhint">${L.flipHint}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flash-nav">
+      <button class="btn secondary navbtn" id="prevBtn" title="${L.prevCard}" ${r.i===0?'disabled style="opacity:.35"':''}>←</button>
+      <button class="btn" id="flipBtn">🔄</button>
+      <button class="btn secondary navbtn" id="nextBtn" title="${L.nextCard}">→</button>
+    </div>
+    <div class="flash-dots">${dots}</div>
+    <div class="flash-count">${L.cardCount(r.i+1, r.cards.length)}</div>
+  `;
+
+  const flash = $('#flash');
+  const flip = ()=>{ r.flipped = !r.flipped; flash.classList.toggle('flipped', r.flipped); };
+  flash.onclick = flip;
+  $('#flipBtn').onclick = flip;
+  $('#prevBtn').onclick = ()=>{ if(r.i>0){ r.i--; renderReview(); } };
+  $('#nextBtn').onclick = ()=>{
+    if(r.i < r.cards.length-1){ r.i++; renderReview(); }
+    else renderReviewDone();
+  };
+  $('#shuffleBtn').onclick = ()=>startReview(r.mode);
+  $('#quitBtn').onclick = ()=>{ review = null; renderHome(); };
+
+  // 키보드 지원 (PC): ← → 이동, space/↑↓ 뒤집기
+  document.onkeydown = (e)=>{
+    if(!review) return;
+    if(e.key==='ArrowRight'){ e.preventDefault(); $('#nextBtn').click(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); $('#prevBtn').click(); }
+    else if(e.key===' '||e.key==='ArrowUp'||e.key==='ArrowDown'){ e.preventDefault(); flip(); }
+  };
+}
+
+function renderReviewDone(){
+  botnav.classList.add('hidden');
+  document.onkeydown = null;
+  const total = review ? review.cards.length : 0;
+  const mode = review ? review.mode : 'due';
+  review = null;
+  app.innerHTML = backBtn() + topbar() + `
+    <div class="result">
+      <img src="${IMG.study}" alt="">
+      <h2>${L.reviewDoneTitle}</h2>
+      <div class="score">${L.cardCount(total, total)}</div>
+      <div class="score" style="max-width:380px;margin:0 auto 18px">${L.reviewDoneSub}</div>
+      <div class="btn-row" style="flex-direction:column">
+        <button class="btn" id="trainBtn">${L.goTrain}</button>
+        <button class="btn secondary" id="againBtn">${L.reviewAgain}</button>
+        <button class="btn secondary" id="homeBtn">${L.home}</button>
+      </div>
+    </div>`;
+  wireBackBtn();
+  $('#trainBtn').onclick = ()=>startSession(student.words);
+  $('#againBtn').onclick = ()=>startReview(mode);
+  $('#homeBtn').onclick = ()=>renderHome();
+}
+
+/* =====================================================================
+   🚂 기차 게임 세션
+   - 문장(type==="sentence")은 출제하지 않음 — 단어만
+   - 2지선다 · 하트 3개 · 하트 0개면 게임오버
+   ===================================================================== */
+
+const LIVES_MAX = 3;          // 하트 개수
+const SESSION_SIZE = 10;      // 한 판 정거장 수
+
+/* 문장 제외 — 퀴즈에 쓸 수 있는 단어만 추림 */
+function quizPool(list){
+  return (list||[]).filter(w=>w && w.type!=="sentence" && w.ko && w.mean);
+}
 
 function buildQuestion(w, allWords){
   // 방향 랜덤: ko->mean (뜻 고르기) 또는 mean->ko (한국어 고르기)
-  // 문장은 항상 뜻 고르기(길어서)
-  const dir = (w.type==="sentence") ? "ko2mean" : (Math.random()<0.5?"ko2mean":"mean2ko");
+  const dir = Math.random()<0.5 ? "ko2mean" : "mean2ko";
   const answer = dir==="ko2mean" ? w.mean : w.ko;
   const promptText = dir==="ko2mean" ? w.ko : w.mean;
 
-  // 오답 후보: 같은 타입 우선, 같은 방향의 필드
+  // 오답 후보: 단어에서만 (문장은 절대 보기로 나오지 않음)
   const field = dir==="ko2mean" ? "mean" : "ko";
   let candidates = allWords
     .filter(x=>x.id!==w.id && x[field] && x[field]!==answer)
     .map(x=>x[field]);
   candidates = [...new Set(candidates)];
-  // 후보가 3개 미만이면(단어 수가 적은 학생) 그만큼만 오답 보기로 사용
+  // 2지선다 — 오답은 1개만
   // (다른 학생 데이터에서 빌려오지 않음 — 데모/타 학생 콘텐츠 혼입 방지)
-  const distractors = shuffle(candidates).slice(0,3);
+  const distractors = shuffle(candidates).slice(0,1);
   const options = shuffle([answer, ...distractors]);
   return {w, dir, promptText, answer, options,
-          label: dir==="mean2ko" ? L.promptMean : (w.type==="sentence"?L.promptSent:L.promptKo)};
+          label: dir==="mean2ko" ? L.promptMean : L.promptKo};
 }
 
-function composeSession(sourceWords, size=10){
-  const words = sourceWords.filter(w=>w.type==="word");
-  const sents = sourceWords.filter(w=>w.type==="sentence");
-  // 문장 최대 2개, 나머지는 단어
-  const chosenSents = shuffle(sents).slice(0, Math.min(2, sents.length));
-  const nWords = size - chosenSents.length;
-  const chosenWords = shuffle(words).slice(0, Math.min(nWords, words.length));
-  let picked = shuffle([...chosenWords, ...chosenSents]);
-  // 부족하면 채우기
-  if(picked.length<size){
-    const rest = shuffle(sourceWords.filter(w=>!picked.includes(w)));
-    picked = picked.concat(rest).slice(0,size);
-  }
-  return picked.map(w=>buildQuestion(w, student.words));
+function composeSession(sourceWords, size=SESSION_SIZE){
+  const all = quizPool(student.words);        // 오답 보기 후보 풀 (문장 제외)
+  let pool  = quizPool(sourceWords);
+  // 복습 대상이 전부 문장/마스터라 비었으면 전체 단어로 대체
+  if(!pool.length) pool = all;
+  const picked = shuffle(pool).slice(0, Math.min(size, pool.length));
+  return picked.map(w=>buildQuestion(w, all));
 }
 
 function startSession(sourceWords){
-  const qs = composeSession(sourceWords, 10);
-  session = { qs, i:0, correct:0, streak:0, earned:0, answered:false, source:sourceWords };
+  document.onkeydown = null;   // 복습 카드 키보드 핸들러 해제
+  review = null;
+  // 문장을 뺀 뒤에도 2개 이상 있어야 2지선다가 성립
+  if(quizPool(student.words).length < 2){ renderNotEnoughWords(); return; }
+  const qs = composeSession(sourceWords, SESSION_SIZE);
+  if(!qs.length){ renderNotEnoughWords(); return; }
+  session = { qs, i:0, correct:0, streak:0, earned:0, answered:false,
+              lives:LIVES_MAX, over:false, played:0, source:sourceWords };
   renderQuestion();
+}
+
+/* 단어가 2개 미만일 때 안내 화면 */
+function renderNotEnoughWords(){
+  botnav.classList.add('hidden');
+  session = null;
+  app.innerHTML = backBtn() + topbar() + `
+    <div class="result">
+      <img src="${IMG.surprised}" alt="">
+      <h2>${L.notEnoughTitle}</h2>
+      <div class="score" style="max-width:380px;margin:0 auto 18px">${L.notEnoughSub}</div>
+      <div class="btn-row" style="flex-direction:column">
+        <button class="btn" id="addNowBtn">➕ ${L.addWord}</button>
+        <button class="btn secondary" id="homeBtn">${L.home}</button>
+      </div>
+    </div>`;
+  wireBackBtn();
+  $('#addNowBtn').onclick = ()=>renderAddWord();
+  $('#homeBtn').onclick = ()=>renderHome();
+}
+
+/* 하트 3개 HTML */
+function livesHtml(lives){
+  let h = "";
+  for(let i=0;i<LIVES_MAX;i++){
+    h += `<span class="heart ${i<lives?'':'lost'}" data-heart="${i}">❤️</span>`;
+  }
+  return h;
 }
 
 function renderQuestion(){
@@ -1086,17 +1311,38 @@ function renderQuestion(){
       <div class="streak ${streakOff}" id="streak">🔥 ${s.streak}</div>
     </div>
     <div class="q-count">${L.qCount(s.i+1, s.qs.length)}</div>
+
+    <div class="train-scene" id="scene">
+      <div class="cloud c1">☁️</div>
+      <div class="cloud c2">☁️</div>
+      <div class="hill"></div>
+      <div class="rail-glow"></div>
+      <div class="rail"></div>
+      <div class="sleepers"></div>
+      <div class="goal">🚩</div>
+      <div class="puff p1">💨</div>
+      <div class="puff p2">💨</div>
+      <div class="puff p3">💨</div>
+      <div class="train idle" id="train">🚂</div>
+      <div class="blast" id="blast">💥</div>
+      <div class="spark s1" id="spark1">✨</div>
+      <div class="spark s2" id="spark2">🔥</div>
+      <div class="won-pop" id="wonPop"></div>
+    </div>
+
     <div class="card">
       <div class="prompt">
         <div class="plabel">${q.label}</div>
-        <div class="pword kr ${q.w.type==='sentence'?'sentence':''}">${q.promptText}</div>
+        <div class="pword kr">${q.promptText}</div>
         ${(q.dir==="ko2mean" && q.w.pron) ? `
           <button class="pron-toggle ${showPron?'active':''}" id="pronToggle" title="${L.pronToggle}">🔤</button>
           <div class="pron ${showPron?'':'hidden'}" id="pronText">${q.w.pron}</div>
         ` : ""}
       </div>
-      <div class="options" id="options"></div>
+      <div class="options duo" id="options"></div>
     </div>
+
+    <div class="lives" id="lives">${livesHtml(s.lives)}</div>
     <div id="noteSlot"></div>
   `;
   const pronBtn = $('#pronToggle');
@@ -1115,12 +1361,58 @@ function renderQuestion(){
     b.onclick = ()=>answer(b, opt, q);
     optEl.appendChild(b);
   });
-  $('#quitBtn').onclick = ()=>renderHome();
+  $('#quitBtn').onclick = ()=>{ session = null; renderHome(); };
+}
+
+/* ---------- 기차 연출 ---------- */
+function wonPop(amount, good){
+  const el = $('#wonPop');
+  if(!el) return;
+  el.textContent = `${good?'+':'−'}${amount} ₩`;
+  el.className = `won-pop ${good?'good':'bad'}`;
+  void el.offsetWidth;              // 리플로우로 애니메이션 재시작
+  el.classList.add('go');
+}
+
+function trainPass(){
+  const scene = $('#scene'), train = $('#train');
+  if(!scene || !train) return;
+  scene.classList.add('running');
+  train.classList.remove('idle');
+  void train.offsetWidth;
+  train.classList.add('pass');
+  wonPop(REWARD, true);
+}
+
+function trainCrash(){
+  const scene = $('#scene'), train = $('#train'), blast = $('#blast');
+  if(!scene || !train) return;
+  train.classList.remove('idle');
+  void train.offsetWidth;
+  train.classList.add('boom');
+  if(blast){ void blast.offsetWidth; blast.classList.add('go'); }
+  ['#spark1','#spark2'].forEach(sel=>{
+    const sp = $(sel);
+    if(sp){ void sp.offsetWidth; sp.classList.add('go'); }
+  });
+  scene.classList.add('shake');
+  document.body.classList.add('shake');
+  setTimeout(()=>document.body.classList.remove('shake'), 520);
+  wonPop(PENALTY, false);
+}
+
+/* 하트 하나 깨뜨리기 (남은 개수 기준) */
+function breakHeart(remaining){
+  const el = $('#lives');
+  if(!el) return;
+  const heart = el.querySelector(`.heart[data-heart="${remaining}"]`);
+  if(heart){ heart.classList.add('losing'); }
 }
 
 function answer(btn, chosen, q){
-  if(session.answered) return;
+  if(!session || session.answered) return;
   session.answered = true;
+  session.played = session.i + 1;
   const correct = chosen===q.answer;
   const opts = app.querySelectorAll('.opt');
   opts.forEach(o=>{
@@ -1141,17 +1433,19 @@ function answer(btn, chosen, q){
     } else if(w.status==="new"){ w.status="learning"; }
     bestStreak = Math.max(bestStreak, session.streak);
     updateBank(REWARD);
-    showFeedback(true, session.streak);
+    trainPass();                       // 🚂 무사 통과
   } else {
     session.streak = 0;
+    session.lives--;                   // 💥 하트 하나 소진
     w.correctStreak = 0;
     if(w.status==="known") w.status="learning"; // 살짝 강등
     updateBank(-PENALTY);
-    showFeedback(false, 0);
+    trainCrash();
+    breakHeart(session.lives);
     // 오답이면 정답 노트 표시
     $('#noteSlot').innerHTML = `<div class="answer-note">
       <div>${L.answerWas} <span class="cor kr">${q.answer}</span></div>
-      ${q.w.type==='sentence'?'':`<div class="ex kr">${q.w.ko} — ${q.w.mean}</div>`}
+      <div class="ex kr">${q.w.ko} — ${q.w.mean}</div>
     </div>`;
   }
 
@@ -1162,48 +1456,59 @@ function answer(btn, chosen, q){
   // Firestore에 백그라운드 저장 (optimistic — 화면은 이미 갱신된 상태)
   persistProgress();
 
-  // 학생이 답을 다시 읽고 외울 시간을 가질 수 있도록 자동으로 넘어가지 않고
-  // "다음 →" 버튼을 눌러야 다음 문제로 진행
-  $('#noteSlot').insertAdjacentHTML('beforeend', `<button class="btn" id="nextBtn" style="margin-top:14px">${L.next}</button>`);
-  $('#nextBtn').onclick = ()=>nextQuestion();
+  if(correct){
+    // 기차가 화면 밖으로 빠져나간 뒤 자동으로 다음 정거장
+    const token = session;
+    setTimeout(()=>{ if(session===token && session.answered) nextQuestion(); }, 1150);
+    return;
+  }
+
+  // 오답 — 하트가 남았는지에 따라 분기
+  if(session.lives<=0){
+    session.over = true;
+    $('#noteSlot').insertAdjacentHTML('beforeend', `
+      <div class="gameover-note">
+        <b>💥 ${L.gameOverTitle}</b>
+        <span>${L.gameOverSub}</span>
+      </div>
+      <button class="btn chili" id="nextBtn" style="margin-top:14px">${L.gameOverBtn}</button>`);
+    $('#nextBtn').onclick = ()=>renderResult();
+  } else {
+    // 학생이 정답을 다시 읽고 외울 시간을 가질 수 있도록 자동으로 넘어가지 않음
+    $('#noteSlot').insertAdjacentHTML('beforeend', `
+      <div style="text-align:center;color:var(--cream-dim);font-size:.8rem;margin-top:10px">
+        ❤️ ${L.livesLeft(session.lives)}</div>
+      <button class="btn" id="nextBtn" style="margin-top:12px">${L.next}</button>`);
+    $('#nextBtn').onclick = ()=>nextQuestion();
+  }
 }
 
 function nextQuestion(){
+  if(!session) return;
   session.i++;
   if(session.i>=session.qs.length){ renderResult(); }
   else renderQuestion();
-}
-
-/* ---------- 일러스트 피드백 ---------- */
-let fbTimer=null;
-function showFeedback(good, streak){
-  clearTimeout(fbTimer);
-  let img, msg, cls;
-  if(good){
-    if(streak>=3){ img=IMG.dance; msg="🔥 "+streak+"!"; cls="good"; }
-    else { img=IMG.excited; msg=L.correct; cls="good"; }
-  } else {
-    img=IMG.cry; msg=L.wrong; cls="bad";
-  }
-  fb.innerHTML = `<img src="${img}" alt="">
-    <div class="fmsg ${cls}">${msg}</div>
-    <div class="fmoney" style="color:${good?'var(--gold)':'var(--chili-soft)'}">
-      ${good?'+'+REWARD:'−'+PENALTY} ₩</div>`;
-  fb.classList.add('show');
-  fbTimer = setTimeout(()=>fb.classList.remove('show'), good?800:1000);
 }
 
 /* ---------- 결과 ---------- */
 function renderResult(){
   botnav.classList.add('hidden');
   const s = session;
-  const img = s.correct>=7 ? IMG.money : s.correct>=5 ? IMG.excited : IMG.surprised;
+  const gameOver = s.lives<=0;
+  const total = gameOver ? (s.played || s.i+1) : s.qs.length;
+  const img = gameOver ? IMG.cry
+            : s.correct>=8 ? IMG.money
+            : s.correct>=5 ? IMG.excited : IMG.surprised;
+  const title = gameOver ? L.gameOverTitle
+              : (s.correct===s.qs.length ? L.clearTitle : L.resultTitle(s.correct));
   app.innerHTML = backBtn() + topbar() + `
     <div class="result">
       <div id="captureArea">
         <img src="${img}" alt="">
-        <h2>${L.resultTitle(s.correct)}</h2>
-        <div class="score">${L.resultScore(s.correct, s.qs.length)}</div>
+        <h2>${title}</h2>
+        <div class="score">${L.resultScore(s.correct, total)}</div>
+        <div style="font-size:1.3rem;letter-spacing:3px;margin-bottom:14px">${livesHtml(Math.max(0,s.lives))}</div>
+        <div class="score" style="margin-bottom:14px">🚉 ${L.stationsPassed(s.correct)}</div>
         <div class="earned">💰 +${wonFmt(s.earned)} ${L.earned}</div>
       </div>
       <div class="btn-row" style="flex-direction:column">
@@ -1214,7 +1519,7 @@ function renderResult(){
     </div>`;
   wireBackBtn();
   $('#moreBtn').onclick = ()=>startSession(s.source);
-  $('#homeBtn').onclick = ()=>renderHome();
+  $('#homeBtn').onclick = ()=>{ session = null; renderHome(); };
   $('#shareBtn').onclick = shareResult;
 }
 
