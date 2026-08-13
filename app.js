@@ -36,7 +36,7 @@ const T = {
     welcome: "Prêt à gagner des wons ?",
     statLearned: "Appris", statKnown: "Mémorisés", statStreak: "Série record",
     play: "Prendre le train 🚂",
-    playSub: "10 gares · 2 choix · 3 vies",
+    playSub: "10 gares · choisis ta voie · 3 vies",
     review: "Réviser mes mots 🃏",
     reviewSub: "Cartes-mémo · sans score, sans stress",
     words: "Mes mots par date",
@@ -67,6 +67,14 @@ const T = {
     livesLeft: (n)=>`${n} vie${n>1?'s':''} restante${n>1?'s':''}`,
     notEnoughTitle: "Pas assez de mots",
     notEnoughSub: "Il te faut au moins 2 mots (les phrases ne comptent pas) pour prendre le train. Ajoute des mots ou attends le prochain cours !",
+    rgHint: "👆 Touche à gauche ou à droite pour changer de voie",
+    rgRestart: "🚂 Repartir",
+    coinsPicked: (n)=>`${n} ₩ de pièces ramassées`,
+    /* 🎯 quiz de mots classique */
+    quiz: "Quiz de mots 🎯",
+    quizSub: "4 choix · à ton rythme, sans chrono",
+    qCountQ: (a,b)=>`Question ${a} / ${b}`,
+    moreQuiz: "10 questions de plus",
     /* 🃏 cartes-mémo */
     reviewTitle: "Cartes-mémo",
     flipHint: "Touche la carte 👆",
@@ -87,7 +95,9 @@ const T = {
     navHome:"Accueil", navWords:"Mots", navLearned:"Appris", navKnown:"Mémorisés", navHelp:"Aide",
     helpTitle:"Comment ça marche",
     help: [
-      ["🚂","Le jeu du train","2 choix par gare. Bonne réponse : le train passe. Mauvaise réponse : boum ! Tu perds un cœur ❤️. À 0 cœur, le voyage s'arrête. Seuls les mots sont posés en question, jamais les phrases."],
+      ["🚂","Le jeu du train","Ton train avance tout seul sur 3 voies. Deux panneaux arrivent : touche à gauche ou à droite pour te placer sur la bonne réponse. Reste au milieu et tu percutes la barrière ! Chaque erreur coûte un cœur ❤️, et à 0 cœur le voyage s'arrête. Seuls les mots sont posés en question, jamais les phrases."],
+      ["💰","Les pièces","Ramasse les pièces sur les voies pour gagner des wons en plus. 3 bonnes réponses d'affilée : ton train s'enflamme 🔥 et tout compte double !"],
+      ["🎯","Le quiz de mots","La version calme : 10 questions à 4 choix, sans train et sans chrono. Même récompense, zéro pression."],
       ["🃏","Les cartes-mémo","Le mode révision, sans score ni cœur : touche la carte pour retourner le mot et voir le sens. Prends ton temps, rien n'est compté."],
       ["💰","La banque de wons","+100 wons par bonne réponse, −50 par erreur. Ta banque ne descend jamais sous 0."],
       ["🔥","Les séries","Enchaîne les bonnes réponses pour faire monter ta série et voir le piment danser."],
@@ -144,7 +154,7 @@ const T = {
     welcome: "Ready to earn some won?",
     statLearned: "Learned", statKnown: "Memorized", statStreak: "Best streak",
     play: "Board the train 🚂",
-    playSub: "10 stations · 2 choices · 3 lives",
+    playSub: "10 stations · pick your track · 3 lives",
     review: "Review my words 🃏",
     reviewSub: "Flashcards · no score, no stress",
     words: "My words by date",
@@ -175,6 +185,14 @@ const T = {
     livesLeft: (n)=>`${n} ${n===1?'life':'lives'} left`,
     notEnoughTitle: "Not enough words",
     notEnoughSub: "You need at least 2 words (sentences don't count) to ride the train. Add some words or wait for your next class!",
+    rgHint: "👆 Tap left or right to switch tracks",
+    rgRestart: "🚂 Get going again",
+    coinsPicked: (n)=>`${n} ₩ in coins collected`,
+    /* 🎯 classic word quiz */
+    quiz: "Word quiz 🎯",
+    quizSub: "4 choices · your own pace, no timer",
+    qCountQ: (a,b)=>`Question ${a} / ${b}`,
+    moreQuiz: "10 more questions",
     /* 🃏 flashcards */
     reviewTitle: "Flashcards",
     flipHint: "Tap the card 👆",
@@ -195,7 +213,9 @@ const T = {
     navHome:"Home", navWords:"Words", navLearned:"Learned", navKnown:"Memorized", navHelp:"Help",
     helpTitle:"How it works",
     help: [
-      ["🚂","The train game","2 choices per station. Right answer: the train passes. Wrong answer: boom! You lose a heart ❤️. At 0 hearts the ride is over. Only words are quizzed — never sentences."],
+      ["🚂","The train game","Your train runs by itself across 3 tracks. Two signs come at you: tap left or right to line up with the correct answer. Stay in the middle and you smash into the barrier! Every miss costs a heart ❤️, and at 0 hearts the ride is over. Only words are quizzed — never sentences."],
+      ["💰","Coins","Grab the coins on the tracks for extra won. 3 correct in a row and your train catches fire 🔥 — everything counts double!"],
+      ["🎯","The word quiz","The calm version: 10 questions with 4 choices, no train and no timer. Same rewards, zero pressure."],
       ["🃏","Flashcards","The review mode, with no score and no hearts: tap a card to flip the word and see its meaning. Take your time, nothing is counted."],
       ["💰","The won bank","+100 won per correct answer, −50 per miss. Your bank never drops below 0."],
       ["🔥","Streaks","Chain correct answers to build your streak and watch the chili dance."],
@@ -728,7 +748,7 @@ function stats(){
 /* ---------- 홈 ---------- */
 function renderHome(){
   botnav.classList.remove('hidden');
-  document.onkeydown = null;   // 복습 카드 키보드 핸들러 해제
+  stopGame();                  // 러너 루프 · 키보드 핸들러 정리
   review = null;
   setNav('home');
   const s = stats();
@@ -752,6 +772,11 @@ function renderHome(){
     <button class="menu-btn" id="playBtn" style="border-color:var(--gold)">
       <span class="emoji">🚂</span>
       <span class="mtext"><b>${L.play}</b><span>${L.playSub}</span></span>
+      <span class="arrow">→</span>
+    </button>
+    <button class="menu-btn" id="quizBtn">
+      <span class="emoji">🎯</span>
+      <span class="mtext"><b>${L.quiz}</b><span>${L.quizSub}</span></span>
       <span class="arrow">→</span>
     </button>
     <button class="menu-btn" id="reviewBtn">
@@ -783,6 +808,7 @@ function renderHome(){
     </button>
   `;
   $('#playBtn').onclick = ()=>startSession(student.words);
+  $('#quizBtn').onclick = ()=>startQuiz(student.words);
   $('#reviewBtn').onclick = ()=>startReview('due');
   $('#wordsBtn').onclick = ()=>renderWords();
   $('#knownBtn').onclick = renderKnown;
@@ -1103,6 +1129,8 @@ function reviewPool(mode){
 }
 
 function startReview(mode='due'){
+  stopGame();
+  session = null;
   const cards = shuffle(reviewPool(mode));
   if(!cards.length){ renderReviewEmpty(); return; }
   review = { cards, i:0, flipped:false, mode, seen:new Set([0]) };
@@ -1230,7 +1258,7 @@ function quizPool(list){
   return (list||[]).filter(w=>w && w.type!=="sentence" && w.ko && w.mean);
 }
 
-function buildQuestion(w, allWords){
+function buildQuestion(w, allWords, nOpt=2){
   // 방향 랜덤: ko->mean (뜻 고르기) 또는 mean->ko (한국어 고르기)
   const dir = Math.random()<0.5 ? "ko2mean" : "mean2ko";
   const answer = dir==="ko2mean" ? w.mean : w.ko;
@@ -1242,33 +1270,164 @@ function buildQuestion(w, allWords){
     .filter(x=>x.id!==w.id && x[field] && x[field]!==answer)
     .map(x=>x[field]);
   candidates = [...new Set(candidates)];
-  // 2지선다 — 오답은 1개만
+  // 기차 게임은 2지선다(오답 1개), 단어 퀴즈는 4지선다(오답 3개)
+  // 후보가 모자라면 있는 만큼만 사용
   // (다른 학생 데이터에서 빌려오지 않음 — 데모/타 학생 콘텐츠 혼입 방지)
-  const distractors = shuffle(candidates).slice(0,1);
+  const distractors = shuffle(candidates).slice(0, nOpt-1);
   const options = shuffle([answer, ...distractors]);
   return {w, dir, promptText, answer, options,
           label: dir==="mean2ko" ? L.promptMean : L.promptKo};
 }
 
-function composeSession(sourceWords, size=SESSION_SIZE){
+function composeSession(sourceWords, size=SESSION_SIZE, nOpt=2){
   const all = quizPool(student.words);        // 오답 보기 후보 풀 (문장 제외)
   let pool  = quizPool(sourceWords);
   // 복습 대상이 전부 문장/마스터라 비었으면 전체 단어로 대체
   if(!pool.length) pool = all;
   const picked = shuffle(pool).slice(0, Math.min(size, pool.length));
-  return picked.map(w=>buildQuestion(w, all));
+  return picked.map(w=>buildQuestion(w, all, nOpt));
 }
 
 function startSession(sourceWords){
-  document.onkeydown = null;   // 복습 카드 키보드 핸들러 해제
+  stopGame();
   review = null;
   // 문장을 뺀 뒤에도 2개 이상 있어야 2지선다가 성립
   if(quizPool(student.words).length < 2){ renderNotEnoughWords(); return; }
   const qs = composeSession(sourceWords, SESSION_SIZE);
   if(!qs.length){ renderNotEnoughWords(); return; }
-  session = { qs, i:0, correct:0, streak:0, earned:0, answered:false,
+  session = { mode:'train', qs, i:0, correct:0, streak:0, earned:0, answered:false, coins:0,
               lives:LIVES_MAX, over:false, played:0, source:sourceWords };
-  renderQuestion();
+  renderGame();
+}
+
+/* =====================================================================
+   🎯 단어 퀴즈 (클래식 4지선다 — 기차 없이 차분하게)
+   기차 게임과 마찬가지로 문장은 출제하지 않음
+   ===================================================================== */
+
+function startQuiz(sourceWords){
+  stopGame();
+  review = null;
+  if(quizPool(student.words).length < 2){ renderNotEnoughWords(); return; }
+  const qs = composeSession(sourceWords, SESSION_SIZE, 4);
+  if(!qs.length){ renderNotEnoughWords(); return; }
+  session = { mode:'quiz', qs, i:0, correct:0, streak:0, earned:0, answered:false,
+              coins:0, lives:LIVES_MAX, over:false, played:0, source:sourceWords };
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion(){
+  botnav.classList.add('hidden');
+  const s = session, q = s.qs[s.i];
+  s.answered = false;
+  const streakOff = s.streak===0 ? "off" : "";
+  app.innerHTML = topbar() + `
+    <div class="quiz-top">
+      <button class="btn ghost" style="width:auto;padding:8px 12px" id="quitBtn">←</button>
+      <div class="progress"><i style="width:${(s.i/s.qs.length)*100}%"></i></div>
+      <div class="streak ${streakOff}" id="streak">🔥 ${s.streak}</div>
+    </div>
+    <div class="q-count">🎯 ${L.qCountQ(s.i+1, s.qs.length)}</div>
+    <div class="card">
+      <div class="prompt">
+        <div class="plabel">${q.label}</div>
+        <div class="pword kr">${q.promptText}</div>
+        ${(q.dir==="ko2mean" && q.w.pron) ? `
+          <button class="pron-toggle ${showPron?'active':''}" id="pronToggle" title="${L.pronToggle}">🔤</button>
+          <div class="pron ${showPron?'':'hidden'}" id="pronText">${q.w.pron}</div>
+        ` : ""}
+      </div>
+      <div class="options" id="options"></div>
+    </div>
+    <div id="noteSlot"></div>`;
+
+  const pronBtn = $('#pronToggle');
+  if(pronBtn){
+    pronBtn.onclick = ()=>{
+      showPron = !showPron;
+      pronBtn.classList.toggle('active', showPron);
+      $('#pronText').classList.toggle('hidden', !showPron);
+    };
+  }
+  const optEl = $('#options');
+  q.options.forEach(opt=>{
+    const b = document.createElement('button');
+    b.className = "opt";
+    b.innerHTML = `<span class="mark"></span><span class="kr"></span>`;
+    b.querySelector('.kr').textContent = opt;   // 직접 추가한 단어의 HTML 주입 차단
+    b.onclick = ()=>quizAnswer(b, opt, q);
+    optEl.appendChild(b);
+  });
+  $('#quitBtn').onclick = ()=>{ session = null; renderHome(); };
+}
+
+function quizAnswer(btn, chosen, q){
+  if(!session || session.answered) return;
+  session.answered = true;
+  session.played = session.i + 1;
+  const correct = chosen===q.answer;
+
+  app.querySelectorAll('.opt').forEach(o=>{
+    o.disabled = true;
+    const t = o.querySelector('.kr').textContent;
+    if(t===q.answer){ o.classList.add('correct'); o.querySelector('.mark').textContent="✓"; }
+    else if(o===btn){ o.classList.add('wrong');   o.querySelector('.mark').textContent="✕"; }
+  });
+
+  const w = q.w;
+  w.seen++;
+  if(correct){
+    session.correct++; session.streak++; session.earned += REWARD;
+    w.correctStreak++; w.totalCorrect++;
+    if(w.correctStreak>=KNOWN_STREAK && w.status!=="master"){
+      w.status = w.correctStreak>=6 ? "master" : "known";
+    } else if(w.status==="new"){ w.status="learning"; }
+    bestStreak = Math.max(bestStreak, session.streak);
+    updateBank(REWARD);
+    showFeedback(true, session.streak);
+  } else {
+    session.streak = 0;
+    w.correctStreak = 0;
+    if(w.status==="known") w.status="learning";   // 살짝 강등
+    updateBank(-PENALTY);
+    showFeedback(false, 0);
+    $('#noteSlot').innerHTML = `<div class="answer-note">
+      <div>${L.answerWas} <span class="cor kr">${q.answer}</span></div>
+      <div class="ex kr">${q.w.ko} — ${q.w.mean}</div>
+    </div>`;
+  }
+
+  const st = $('#streak');
+  if(st){ st.textContent = `🔥 ${session.streak}`; st.className = "streak "+(session.streak===0?"off":""); }
+  persistProgress();
+
+  // 답을 다시 읽고 외울 시간을 갖도록 버튼을 눌러야 다음 문제로 진행
+  $('#noteSlot').insertAdjacentHTML('beforeend',
+    `<button class="btn" id="nextBtn" style="margin-top:14px">${L.next}</button>`);
+  $('#nextBtn').onclick = ()=>{
+    session.i++;
+    if(session.i>=session.qs.length) renderResult();
+    else renderQuizQuestion();
+  };
+}
+
+/* 정답/오답 일러스트 오버레이 (단어 퀴즈 전용) */
+let fbTimer = null;
+function showFeedback(good, streak){
+  clearTimeout(fbTimer);
+  let img, msg, cls;
+  if(good){
+    if(streak>=3){ img=IMG.dance; msg="🔥 "+streak+"!"; cls="good"; }
+    else { img=IMG.excited; msg=L.correct; cls="good"; }
+  } else {
+    img=IMG.cry; msg=L.wrong; cls="bad";
+  }
+  fb.innerHTML = `<img src="${img}" alt="">
+    <div class="fmsg ${cls}">${msg}</div>
+    <div class="fmoney" style="color:${good?'var(--gold)':'var(--chili-soft)'}">
+      ${good?'+'+REWARD:'−'+PENALTY} ₩</div>`;
+  fb.classList.add('show');
+  fbTimer = setTimeout(()=>fb.classList.remove('show'), good?800:1000);
 }
 
 /* 단어가 2개 미만일 때 안내 화면 */
@@ -1299,106 +1458,295 @@ function livesHtml(lives){
   return h;
 }
 
-function renderQuestion(){
+/* =====================================================================
+   러너 엔진 — CSS 3D 원근감 · 3레인
+   좌/우 레인에 정답 간판, 가운데 레인은 차단벽(=미선택 시 충돌)
+   ===================================================================== */
+
+const RG = {
+  LANE_X: 124,        // 레인 간격 (z=0 기준 px) — 간판 폭(112)보다 넓어야 안 겹침
+  Z_SPAWN: 1050,      // 간판이 생성되는 거리
+  Z_GONE: -300,       // 이 거리를 지나면 DOM에서 제거
+  APPROACH_S: 6.0,    // 간판이 도달하기까지 걸리는 시간(초)
+  COIN_VALUE: 20,     // 코인 1개 값
+  BOOST_AT: 3,        // 연속 정답 몇 개부터 부스트
+};
+
+let game = null;      // 러너 런타임 상태 (세션과 별개)
+
+/* 게임 정리 — 화면을 떠날 때 반드시 호출 */
+function stopGame(){
+  if(game){
+    if(game.raf) cancelAnimationFrame(game.raf);
+    clearTimeout(game.leanT);
+    clearTimeout(game.nextT);
+    game.running = false;
+  }
+  game = null;
+  document.onkeydown = null;
+}
+
+/* ---------- 화면 구성 (한 판에 한 번만 그림) ---------- */
+function renderGame(){
   botnav.classList.add('hidden');
-  const s = session, q = s.qs[s.i];
-  s.answered = false;
-  const streakOff = s.streak===0 ? "off" : "";
+  stopGame();
+  const s = session;
+
   app.innerHTML = topbar() + `
     <div class="quiz-top">
       <button class="btn ghost" style="width:auto;padding:8px 12px" id="quitBtn">←</button>
-      <div class="progress"><i style="width:${(s.i/s.qs.length)*100}%"></i></div>
-      <div class="streak ${streakOff}" id="streak">🔥 ${s.streak}</div>
+      <div class="progress"><i id="rgProg" style="width:0%"></i></div>
+      <div class="streak off" id="streak">🔥 0</div>
     </div>
-    <div class="q-count">${L.qCount(s.i+1, s.qs.length)}</div>
+    <div class="q-count" id="rgCount">${L.qCount(1, s.qs.length)}</div>
 
-    <div class="train-scene" id="scene">
-      <div class="cloud c1">☁️</div>
-      <div class="cloud c2">☁️</div>
-      <div class="hill"></div>
-      <div class="rail-glow"></div>
-      <div class="rail"></div>
-      <div class="sleepers"></div>
-      <div class="goal">🚩</div>
-      <div class="puff p1">💨</div>
-      <div class="puff p2">💨</div>
-      <div class="puff p3">💨</div>
-      <div class="train idle" id="train">🚂</div>
-      <div class="blast" id="blast">💥</div>
-      <div class="spark s1" id="spark1">✨</div>
-      <div class="spark s2" id="spark2">🔥</div>
-      <div class="won-pop" id="wonPop"></div>
-    </div>
-
-    <div class="card">
-      <div class="prompt">
-        <div class="plabel">${q.label}</div>
-        <div class="pword kr">${q.promptText}</div>
-        ${(q.dir==="ko2mean" && q.w.pron) ? `
-          <button class="pron-toggle ${showPron?'active':''}" id="pronToggle" title="${L.pronToggle}">🔤</button>
-          <div class="pron ${showPron?'':'hidden'}" id="pronText">${q.w.pron}</div>
-        ` : ""}
+    <div class="rg-stage" id="rgStage">
+      <div class="rg-world">
+        <div class="rg-floor">
+          <div class="rg-ballast" style="left:calc(50% - ${RG.LANE_X}px)"></div>
+          <div class="rg-ballast" style="left:50%"></div>
+          <div class="rg-ballast" style="left:calc(50% + ${RG.LANE_X}px)"></div>
+          <div class="rg-ties"></div>
+          <div class="rg-rail" style="left:calc(50% - ${RG.LANE_X}px)"></div>
+          <div class="rg-rail" style="left:50%"></div>
+          <div class="rg-rail" style="left:calc(50% + ${RG.LANE_X}px)"></div>
+        </div>
+        <div class="rg-parked l"></div>
+        <div class="rg-parked r"></div>
+        <div class="rg-wall l"></div>
+        <div class="rg-wall r"></div>
+        <div class="rg-track" id="rgTrack"></div>
       </div>
-      <div class="options duo" id="options"></div>
+
+      <div class="rg-fog"></div>
+      <div class="rg-vanish"></div>
+      <div class="rg-speed"></div>
+      <div class="rg-arrows"><i>◀</i><i>▶</i></div>
+
+      <div class="rg-player" id="rgPlayer">
+        <div class="rg-shadow"></div>
+        <div class="rg-train">
+          <div class="t-roof"></div>
+          <div class="t-body">
+            <div class="t-win"></div><div class="t-win"></div>
+            <div class="t-light l"></div><div class="t-light r"></div>
+          </div>
+          <div class="t-wheels"></div>
+        </div>
+        <div class="rg-flame">🔥</div>
+      </div>
+
+      <div class="rg-hud">
+        <div class="rg-prompt">
+          <div class="rg-plabel" id="rgLabel"></div>
+          <div class="rg-pword kr" id="rgWord"></div>
+          <div class="rg-ppron" id="rgPron"></div>
+        </div>
+        <div class="rg-coins"><span class="mini-coin">₩</span><span id="rgCoins">0</span></div>
+        <div class="rg-mult" id="rgMult">x2 🔥</div>
+        <div class="rg-hint" id="rgHint">${L.rgHint}</div>
+      </div>
+
+      <div class="rg-flash" id="rgFlash"></div>
+      <div class="rg-boom" id="rgBoom">💥</div>
+      <div class="won-pop" id="wonPop"></div>
+      <div class="won-pop coin" id="coinPop"></div>
     </div>
 
     <div class="lives" id="lives">${livesHtml(s.lives)}</div>
-    <div id="noteSlot"></div>
-  `;
-  const pronBtn = $('#pronToggle');
-  if(pronBtn){
-    pronBtn.onclick = ()=>{
-      showPron = !showPron;
-      pronBtn.classList.toggle('active', showPron);
-      $('#pronText').classList.toggle('hidden', !showPron);
-    };
-  }
-  const optEl = $('#options');
-  q.options.forEach(opt=>{
-    const b = document.createElement('button');
-    b.className = "opt";
-    b.innerHTML = `<span class="mark"></span><span class="kr">${opt}</span>`;
-    b.onclick = ()=>answer(b, opt, q);
-    optEl.appendChild(b);
-  });
-  $('#quitBtn').onclick = ()=>{ session = null; renderHome(); };
+    <div id="noteSlot"></div>`;
+
+  const stage = $('#rgStage');
+  game = {
+    stage, track:$('#rgTrack'), player:$('#rgPlayer'),
+    objs:[], station:null, lane:0, mult:1,
+    running:true, raf:0, last:0, leanT:0, nextT:0, lastTouch:0,
+  };
+  rgBindInput(stage);
+  $('#quitBtn').onclick = ()=>{ stopGame(); session = null; renderHome(); };
+
+  rgSpawnStation();
+  game.raf = requestAnimationFrame(rgLoop);
 }
 
-/* ---------- 기차 연출 ---------- */
-function wonPop(amount, good){
-  const el = $('#wonPop');
+/* ---------- 입력: 스와이프 / 좌우 탭 / 방향키 ---------- */
+function rgBindInput(stage){
+  let sx = null, sy = null, swiped = false;
+
+  stage.addEventListener('touchstart', e=>{
+    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; swiped = false;
+  }, {passive:true});
+
+  stage.addEventListener('touchmove', e=>{
+    if(sx===null || swiped) return;
+    const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if(Math.abs(dx) > 26 && Math.abs(dx) > Math.abs(dy)){
+      swiped = true;
+      rgMove(dx > 0 ? 1 : -1);
+    }
+  }, {passive:true});
+
+  stage.addEventListener('touchend', e=>{
+    if(!swiped && sx!==null){          // 스와이프가 아니면 좌/우 탭으로 처리
+      const r = stage.getBoundingClientRect();
+      rgMove(sx - r.left < r.width/2 ? -1 : 1);
+    }
+    game && (game.lastTouch = Date.now());
+    sx = null;
+  }, {passive:true});
+
+  stage.addEventListener('click', e=>{
+    // 터치 직후 발생하는 유령 클릭 무시 (한 번 입력에 두 칸 이동 방지)
+    if(game && Date.now() - game.lastTouch < 600) return;
+    const r = stage.getBoundingClientRect();
+    rgMove(e.clientX - r.left < r.width/2 ? -1 : 1);
+  });
+
+  document.onkeydown = e=>{
+    if(!game) return;
+    if(e.key==='ArrowLeft'  || e.key==='a' || e.key==='A'){ e.preventDefault(); rgMove(-1); }
+    if(e.key==='ArrowRight' || e.key==='d' || e.key==='D'){ e.preventDefault(); rgMove(1);  }
+  };
+}
+
+/* 레인 이동 (-1 왼쪽 / 0 가운데 / 1 오른쪽) */
+function rgMove(delta){
+  const g = game;
+  if(!g || !g.running) return;
+  const next = Math.max(-1, Math.min(1, g.lane + delta));
+  if(next === g.lane) return;
+  g.lane = next;
+  g.player.style.transform = `translateX(${next * RG.LANE_X}px)`;
+  g.player.classList.remove('lean-l','lean-r');
+  g.player.classList.add(delta > 0 ? 'lean-r' : 'lean-l');
+  clearTimeout(g.leanT);
+  g.leanT = setTimeout(()=>{
+    if(game && game.player) game.player.classList.remove('lean-l','lean-r');
+  }, 200);
+  const hint = $('#rgHint');
+  if(hint) hint.classList.add('gone');
+}
+
+/* ---------- 오브젝트 생성/배치 ---------- */
+function rgPlace(o){
+  o.el.style.transform = `translate3d(${o.lane * RG.LANE_X}px,0,${-o.z}px)`;
+}
+
+function rgObj(type, html, lane, z){
+  const el = document.createElement('div');
+  el.className = 'rg-obj ' + type;
+  el.innerHTML = html;
+  game.track.appendChild(el);
+  const o = {el, type, lane, z};
+  game.objs.push(o);
+  rgPlace(o);
+  return o;
+}
+
+/* 한 정거장 = 좌/우 정답 간판 + 가운데 차단벽 + 코인 줄 */
+function rgSpawnStation(){
+  const g = game, s = session, q = s.qs[s.i];
+
+  // HUD: 문제 단어
+  $('#rgLabel').textContent = q.label;
+  const wEl = $('#rgWord');
+  wEl.textContent = q.promptText;
+  wEl.classList.toggle('long', q.promptText.length > 9);
+  $('#rgPron').textContent = (q.dir==='ko2mean' && q.w.pron) ? q.w.pron : '';
+  $('#rgCount').textContent = L.qCount(s.i+1, s.qs.length);
+  $('#rgProg').style.width = (s.i / s.qs.length * 100) + '%';
+
+  const gateHtml = `<div class="gate-in"><div class="gate-panel"></div><div class="gate-legs"></div></div>`;
+  const gL = rgObj('gate', gateHtml, -1, RG.Z_SPAWN);
+  const gR = rgObj('gate', gateHtml,  1, RG.Z_SPAWN);
+  rgSetPanel(gL, q.options[0]);
+  rgSetPanel(gR, q.options[1]);
+
+  const bar = rgObj('barrier', `<div class="barrier-in"></div>`, 0, RG.Z_SPAWN);
+
+  g.station = {q, gates:{'-1':gL, '1':gR}, barrier:bar, resolved:false};
+
+  // 코인 줄 — 정답 위치와 무관한 랜덤 레인, 간판보다 먼저 도착
+  const lane = [-1,0,1][Math.floor(Math.random()*3)];
+  const n = 3 + Math.floor(Math.random()*3);
+  for(let k=0;k<n;k++){
+    rgObj('coin', `<div class="coin-in"><div class="coin-face">₩</div></div>`,
+          lane, RG.Z_SPAWN*0.58 - k*120);
+  }
+}
+
+/* 간판에 보기 텍스트 넣기 — 긴 답은 글자를 줄여 넘치지 않게 */
+function rgSetPanel(gate, text){
+  const p = gate.el.querySelector('.gate-panel');
+  p.textContent = text;              // 직접 추가한 단어의 HTML 주입 차단
+  p.classList.toggle('sm', text.length > 12);
+  p.classList.toggle('xs', text.length > 21);
+  gate.answer = text;
+}
+
+function rgClearObjs(){
+  game.objs.forEach(o=>o.el.remove());
+  game.objs = [];
+  game.station = null;
+}
+
+/* ---------- 메인 루프 ---------- */
+function rgLoop(ts){
+  const g = game;
+  if(!g || !g.running) return;
+  if(!g.last) g.last = ts;
+  let dt = (ts - g.last) / 1000;
+  g.last = ts;
+  if(dt > 0.1) dt = 0.1;                      // 탭 전환 후 순간이동 방지
+  const dz = (RG.Z_SPAWN / RG.APPROACH_S) * dt;
+
+  for(let i=g.objs.length-1; i>=0; i--){
+    const o = g.objs[i];
+    o.z -= dz;
+    rgPlace(o);
+    if(o.type==='coin' && !o.taken && o.z <= 40 && o.z > -80 && o.lane === g.lane){
+      rgTakeCoin(o);
+    }
+    if(o.z <= RG.Z_GONE){ o.el.remove(); g.objs.splice(i,1); }
+  }
+
+  const st = g.station;
+  if(st && !st.resolved && st.barrier.z <= 0){
+    st.resolved = true;
+    rgResolve();
+  }
+  if(g.running) g.raf = requestAnimationFrame(rgLoop);
+}
+
+function rgTakeCoin(o){
+  o.taken = true;
+  o.el.style.transition = 'opacity .22s, transform .22s';
+  o.el.style.opacity = '0';
+  const val = RG.COIN_VALUE * game.mult;
+  session.coins += val;
+  session.earned += val;
+  updateBank(val);
+  const c = $('#rgCoins');
+  if(c) c.textContent = session.coins;
+  popText('#coinPop', `+${val} ₩`, 'coin');
+}
+
+/* 플로팅 텍스트 (애니메이션 재시작 포함) */
+function popText(sel, text, cls){
+  const el = $(sel);
   if(!el) return;
-  el.textContent = `${good?'+':'−'}${amount} ₩`;
-  el.className = `won-pop ${good?'good':'bad'}`;
-  void el.offsetWidth;              // 리플로우로 애니메이션 재시작
+  el.textContent = text;
+  el.className = `won-pop ${cls}`;
+  void el.offsetWidth;
   el.classList.add('go');
 }
 
-function trainPass(){
-  const scene = $('#scene'), train = $('#train');
-  if(!scene || !train) return;
-  scene.classList.add('running');
-  train.classList.remove('idle');
-  void train.offsetWidth;
-  train.classList.add('pass');
-  wonPop(REWARD, true);
-}
-
-function trainCrash(){
-  const scene = $('#scene'), train = $('#train'), blast = $('#blast');
-  if(!scene || !train) return;
-  train.classList.remove('idle');
-  void train.offsetWidth;
-  train.classList.add('boom');
-  if(blast){ void blast.offsetWidth; blast.classList.add('go'); }
-  ['#spark1','#spark2'].forEach(sel=>{
-    const sp = $(sel);
-    if(sp){ void sp.offsetWidth; sp.classList.add('go'); }
-  });
-  scene.classList.add('shake');
-  document.body.classList.add('shake');
-  setTimeout(()=>document.body.classList.remove('shake'), 520);
-  wonPop(PENALTY, false);
+function rgFlash(good){
+  const f = $('#rgFlash');
+  if(!f) return;
+  f.className = 'rg-flash';
+  void f.offsetWidth;
+  f.className = 'rg-flash ' + (good ? 'good' : 'bad');
 }
 
 /* 하트 하나 깨뜨리기 (남은 개수 기준) */
@@ -1406,66 +1754,82 @@ function breakHeart(remaining){
   const el = $('#lives');
   if(!el) return;
   const heart = el.querySelector(`.heart[data-heart="${remaining}"]`);
-  if(heart){ heart.classList.add('losing'); }
+  if(heart) heart.classList.add('losing');
 }
 
-function answer(btn, chosen, q){
-  if(!session || session.answered) return;
-  session.answered = true;
-  session.played = session.i + 1;
-  const correct = chosen===q.answer;
-  const opts = app.querySelectorAll('.opt');
-  opts.forEach(o=>{
-    o.disabled = true;
-    const txt = o.querySelector('.kr').textContent;
-    if(txt===q.answer){ o.classList.add('correct'); o.querySelector('.mark').textContent="✓"; }
-    else if(o===btn){ o.classList.add('wrong'); o.querySelector('.mark').textContent="✕"; }
-  });
+/* ---------- 정거장 판정 ---------- */
+function rgResolve(){
+  const g = game, s = session, st = g.station, q = st.q;
+  const gate = g.lane === 0 ? null : st.gates[String(g.lane)];
+  const chosen = gate ? gate.answer : null;     // 가운데 = 미선택 → 오답 처리
+  const correct = chosen === q.answer;
 
-  // SRS + stats
+  s.played = s.i + 1;
   const w = q.w;
   w.seen++;
+
   if(correct){
-    session.correct++; session.streak++; session.earned += REWARD;
+    const gain = REWARD * g.mult;
+    s.correct++; s.streak++; s.earned += gain;
     w.correctStreak++; w.totalCorrect++;
     if(w.correctStreak>=KNOWN_STREAK && w.status!=="master"){
       w.status = w.correctStreak>=6 ? "master" : "known";
     } else if(w.status==="new"){ w.status="learning"; }
-    bestStreak = Math.max(bestStreak, session.streak);
-    updateBank(REWARD);
-    trainPass();                       // 🚂 무사 통과
-  } else {
-    session.streak = 0;
-    session.lives--;                   // 💥 하트 하나 소진
-    w.correctStreak = 0;
-    if(w.status==="known") w.status="learning"; // 살짝 강등
-    updateBank(-PENALTY);
-    trainCrash();
-    breakHeart(session.lives);
-    // 오답이면 정답 노트 표시
-    $('#noteSlot').innerHTML = `<div class="answer-note">
-      <div>${L.answerWas} <span class="cor kr">${q.answer}</span></div>
-      <div class="ex kr">${q.w.ko} — ${q.w.mean}</div>
-    </div>`;
-  }
+    bestStreak = Math.max(bestStreak, s.streak);
+    updateBank(gain);
 
-  // 스트릭 표시 갱신
-  const st = $('#streak');
-  if(st){ st.textContent = `🔥 ${session.streak}`; st.className = "streak "+(session.streak===0?"off":""); }
+    gate.el.querySelector('.gate-in').classList.add('hit');
+    st.gates[String(-g.lane)].el.querySelector('.gate-in').classList.add('miss');
+    rgFlash(true);
+    popText('#wonPop', `+${gain} ₩`, 'good');
+    rgUpdateBoost();
+    rgSyncStreak();
+    persistProgress();
 
-  // Firestore에 백그라운드 저장 (optimistic — 화면은 이미 갱신된 상태)
-  persistProgress();
-
-  if(correct){
-    // 기차가 화면 밖으로 빠져나간 뒤 자동으로 다음 정거장
-    const token = session;
-    setTimeout(()=>{ if(session===token && session.answered) nextQuestion(); }, 1150);
+    // 멈추지 않고 그대로 다음 정거장으로 (간판은 뒤로 흘러 지나감)
+    g.nextT = setTimeout(()=>{
+      if(!game || !session) return;
+      s.i++;
+      if(s.i >= s.qs.length){ renderResult(); return; }
+      rgSpawnStation();
+    }, 420);
     return;
   }
 
-  // 오답 — 하트가 남았는지에 따라 분기
-  if(session.lives<=0){
-    session.over = true;
+  /* ----- 충돌 ----- */
+  s.streak = 0;
+  s.lives--;
+  w.correctStreak = 0;
+  if(w.status==="known") w.status="learning";   // 살짝 강등
+  updateBank(-PENALTY);
+
+  if(gate) gate.el.querySelector('.gate-in').classList.add('miss');
+  const right = st.gates['-1'].answer === q.answer ? st.gates['-1'] : st.gates['1'];
+  right.el.querySelector('.gate-in').classList.add('hit');
+
+  g.running = false;
+  cancelAnimationFrame(g.raf);
+  g.player.classList.add('crash');
+  const boom = $('#rgBoom');
+  if(boom){ void boom.offsetWidth; boom.classList.add('go'); }
+  rgFlash(false);
+  popText('#wonPop', `−${PENALTY} ₩`, 'bad');
+  g.stage.classList.add('shake');
+  document.body.classList.add('shake');
+  setTimeout(()=>document.body.classList.remove('shake'), 520);
+  breakHeart(s.lives);
+  g.mult = 1;
+  rgUpdateBoost();
+  rgSyncStreak();
+  persistProgress();
+
+  $('#noteSlot').innerHTML = `<div class="answer-note">
+    <div>${L.answerWas} <span class="cor kr">${q.answer}</span></div>
+    <div class="ex kr">${q.w.ko} — ${q.w.mean}</div>
+  </div>`;
+
+  if(s.lives <= 0){
+    s.over = true;
     $('#noteSlot').insertAdjacentHTML('beforeend', `
       <div class="gameover-note">
         <b>💥 ${L.gameOverTitle}</b>
@@ -1474,51 +1838,92 @@ function answer(btn, chosen, q){
       <button class="btn chili" id="nextBtn" style="margin-top:14px">${L.gameOverBtn}</button>`);
     $('#nextBtn').onclick = ()=>renderResult();
   } else {
-    // 학생이 정답을 다시 읽고 외울 시간을 가질 수 있도록 자동으로 넘어가지 않음
+    // 정답을 다시 읽고 외울 시간을 주기 위해 버튼을 눌러야 재출발
     $('#noteSlot').insertAdjacentHTML('beforeend', `
       <div style="text-align:center;color:var(--cream-dim);font-size:.8rem;margin-top:10px">
-        ❤️ ${L.livesLeft(session.lives)}</div>
-      <button class="btn" id="nextBtn" style="margin-top:12px">${L.next}</button>`);
-    $('#nextBtn').onclick = ()=>nextQuestion();
+        ❤️ ${L.livesLeft(s.lives)}</div>
+      <button class="btn" id="nextBtn" style="margin-top:12px">${L.rgRestart}</button>`);
+    $('#nextBtn').onclick = ()=>rgResume();
   }
 }
 
-function nextQuestion(){
-  if(!session) return;
-  session.i++;
-  if(session.i>=session.qs.length){ renderResult(); }
-  else renderQuestion();
+/* 충돌 후 재출발 */
+function rgResume(){
+  const g = game, s = session;
+  if(!g || !s) return;
+  s.i++;
+  if(s.i >= s.qs.length){ renderResult(); return; }
+  $('#noteSlot').innerHTML = '';
+  rgClearObjs();
+  g.lane = 0;
+  g.player.classList.remove('crash','lean-l','lean-r');
+  g.player.style.transform = 'translateX(0)';
+  g.stage.classList.remove('shake');
+  const boom = $('#rgBoom');
+  if(boom) boom.classList.remove('go');
+  rgSpawnStation();
+  g.running = true;
+  g.last = 0;
+  g.raf = requestAnimationFrame(rgLoop);
+}
+
+/* 연속 정답 부스트 (x2) */
+function rgUpdateBoost(){
+  const g = game, s = session;
+  g.mult = s.streak >= RG.BOOST_AT ? 2 : 1;
+  const on = g.mult > 1;
+  g.stage.classList.toggle('boosting', on);
+  g.player.classList.toggle('boost', on);
+  const m = $('#rgMult');
+  if(m) m.classList.toggle('on', on);
+}
+
+function rgSyncStreak(){
+  const st = $('#streak');
+  if(!st) return;
+  st.textContent = `🔥 ${session.streak}`;
+  st.className = 'streak ' + (session.streak===0 ? 'off' : '');
 }
 
 /* ---------- 결과 ---------- */
 function renderResult(){
   botnav.classList.add('hidden');
+  stopGame();
   const s = session;
-  const gameOver = s.lives<=0;
+  const isTrain = s.mode !== 'quiz';
+  const gameOver = isTrain && s.lives<=0;
   const total = gameOver ? (s.played || s.i+1) : s.qs.length;
   const img = gameOver ? IMG.cry
             : s.correct>=8 ? IMG.money
             : s.correct>=5 ? IMG.excited : IMG.surprised;
   const title = gameOver ? L.gameOverTitle
-              : (s.correct===s.qs.length ? L.clearTitle : L.resultTitle(s.correct));
+              : (isTrain && s.correct===s.qs.length) ? L.clearTitle
+              : L.resultTitle(s.correct);
+
+  // 기차 게임만 하트·정거장·코인을 표시, 단어 퀴즈는 점수만 간결하게
+  const trainStats = isTrain ? `
+        <div style="font-size:1.3rem;letter-spacing:3px;margin-bottom:14px">${livesHtml(Math.max(0,s.lives))}</div>
+        <div class="score" style="margin-bottom:6px">🚉 ${L.stationsPassed(s.correct)}</div>
+        <div class="score" style="margin-bottom:14px;color:var(--gold)">
+          <span class="mini-coin">₩</span> ${L.coinsPicked(s.coins||0)}</div>` : ``;
+
   app.innerHTML = backBtn() + topbar() + `
     <div class="result">
       <div id="captureArea">
         <img src="${img}" alt="">
         <h2>${title}</h2>
         <div class="score">${L.resultScore(s.correct, total)}</div>
-        <div style="font-size:1.3rem;letter-spacing:3px;margin-bottom:14px">${livesHtml(Math.max(0,s.lives))}</div>
-        <div class="score" style="margin-bottom:14px">🚉 ${L.stationsPassed(s.correct)}</div>
+        ${trainStats}
         <div class="earned">💰 +${wonFmt(s.earned)} ${L.earned}</div>
       </div>
       <div class="btn-row" style="flex-direction:column">
-        <button class="btn" id="moreBtn">${L.more}</button>
+        <button class="btn" id="moreBtn">${isTrain ? L.more : L.moreQuiz}</button>
         <button class="btn secondary" id="homeBtn">${L.home}</button>
         <button class="btn secondary" id="shareBtn">📤 ${L.share}</button>
       </div>
     </div>`;
   wireBackBtn();
-  $('#moreBtn').onclick = ()=>startSession(s.source);
+  $('#moreBtn').onclick = ()=> isTrain ? startSession(s.source) : startQuiz(s.source);
   $('#homeBtn').onclick = ()=>{ session = null; renderHome(); };
   $('#shareBtn').onclick = shareResult;
 }

@@ -190,76 +190,191 @@ body{
 .fmsg.bad{color:var(--chili-soft)}
 
 /* =====================================================================
-   🚂 기차 게임
+   🚂 기차 러너 게임 (CSS 3D · 3레인)
    ===================================================================== */
-.train-scene{position:relative;height:132px;margin:4px 0 16px;overflow:hidden;border-radius:18px;
-  border:1px solid var(--line);
+.rg-stage{position:relative;width:100%;height:min(56vh,440px);min-height:290px;
+  margin:2px 0 0;border-radius:20px;overflow:hidden;border:1px solid var(--line);
+  perspective:900px;perspective-origin:50% 33%;
+  background:linear-gradient(180deg,#070A16 0%,#0D1226 30%,#141A33 62%,#1A2140 100%);
+  touch-action:none;-webkit-user-select:none;user-select:none;cursor:pointer;
+  box-shadow:var(--shadow)}
+.rg-world{position:absolute;inset:0;transform-style:preserve-3d}
+
+/* ---- 터널 바닥 ---- */
+.rg-floor{position:absolute;left:50%;bottom:0;width:1500px;height:3200px;
+  transform:translateX(-750px) rotateX(90deg);transform-origin:50% 100%;
+  background:linear-gradient(180deg,#3B2C1F 0%,#4A3728 45%,#54402E 100%)}
+.rg-ties{position:absolute;inset:0;
+  background-image:repeating-linear-gradient(0deg,
+    rgba(28,18,10,.55) 0 16px, rgba(0,0,0,0) 16px 74px);
+  animation:rgTies .5s linear infinite}
+@keyframes rgTies{from{background-position-y:0}to{background-position-y:74px}}
+.rg-rail{position:absolute;top:0;bottom:0;width:54px;margin-left:-27px;
+  background:linear-gradient(90deg,
+    transparent 0 8%, #9AA2C0 8% 19%, rgba(255,255,255,.35) 19% 22%, transparent 22% 78%,
+    #9AA2C0 78% 89%, rgba(255,255,255,.35) 89% 92%, transparent 92%)}
+.rg-ballast{position:absolute;top:0;bottom:0;width:150px;margin-left:-75px;
+  background:linear-gradient(90deg,transparent,rgba(0,0,0,.22) 30%,rgba(0,0,0,.22) 70%,transparent)}
+
+/* ---- 터널 벽 (속도감) ---- */
+.rg-wall{position:absolute;bottom:-40px;left:50%;width:3200px;height:520px;
+  transform-origin:0 100%;backface-visibility:visible;
   background:
-    radial-gradient(520px 200px at 50% -40%, rgba(232,176,75,.10), transparent 70%),
-    linear-gradient(180deg,#1B2240 0%,#161C33 100%)}
+    repeating-linear-gradient(90deg,
+      rgba(255,214,140,.0) 0 150px, rgba(255,214,140,.55) 150px 176px, rgba(255,214,140,0) 176px 300px),
+    linear-gradient(180deg,#3A4270 0%,#242B4C 55%,#171D36 100%);
+  animation:rgWall .62s linear infinite}
+.rg-wall.l{transform:translateX(-330px) rotateY(90deg)}
+.rg-wall.r{transform:translateX(330px) rotateY(90deg)}
+@keyframes rgWall{from{background-position-x:300px,0}to{background-position-x:0,0}}
+/* 벽에 세워둔 정차 열차 실루엣 */
+.rg-parked{position:absolute;bottom:-40px;left:50%;width:3200px;height:190px;
+  transform-origin:0 100%;
+  background:
+    repeating-linear-gradient(90deg,
+      #B23A2E 0 300px, #8E2C24 300px 316px, #C4463A 316px 600px, #8E2C24 600px 616px),
+    #A33328;
+  box-shadow:inset 0 30px 40px -20px rgba(255,255,255,.18);
+  animation:rgParked .62s linear infinite;opacity:.92}
+.rg-parked.l{transform:translateX(-300px) rotateY(90deg)}
+.rg-parked.r{transform:translateX(300px) rotateY(90deg)}
+@keyframes rgParked{from{background-position-x:616px,0}to{background-position-x:0,0}}
+/* 열차 창문 띠 */
+.rg-parked::after{content:"";position:absolute;left:0;right:0;top:34px;height:46px;
+  background:repeating-linear-gradient(90deg,
+    rgba(180,225,255,.75) 0 70px, transparent 70px 140px)}
 
-/* 배경 구름 / 산 */
-.train-scene .cloud{position:absolute;font-size:1.1rem;opacity:.35;animation:cloudDrift 14s linear infinite}
-.train-scene .cloud.c1{top:14px;left:-14%;animation-duration:16s}
-.train-scene .cloud.c2{top:34px;left:-14%;animation-duration:23s;animation-delay:-8s;font-size:.85rem;opacity:.25}
-@keyframes cloudDrift{from{transform:translateX(0)}to{transform:translateX(760px)}}
-.train-scene .hill{position:absolute;bottom:34px;left:0;right:0;height:44px;opacity:.35;
-  background:radial-gradient(60px 34px at 18% 100%, #28325A 98%, transparent 100%),
-             radial-gradient(84px 44px at 52% 100%, #232C4F 98%, transparent 100%),
-             radial-gradient(66px 30px at 84% 100%, #28325A 98%, transparent 100%)}
+/* 소실점 안개 */
+.rg-fog{position:absolute;left:0;right:0;top:0;height:52%;pointer-events:none;z-index:5;
+  background:linear-gradient(180deg,#0A0E1E 0%,rgba(10,14,30,.85) 40%,rgba(12,17,36,0) 100%)}
+.rg-vanish{position:absolute;left:50%;top:33%;width:150px;height:90px;margin:-45px 0 0 -75px;
+  border-radius:50%;pointer-events:none;z-index:6;
+  background:radial-gradient(closest-side,rgba(232,176,75,.30),transparent 75%)}
 
-/* 선로 */
-.rail{position:absolute;left:0;right:0;bottom:30px;height:4px;border-radius:2px;
-  background:linear-gradient(90deg,transparent,#3A4571 6%,#4A5789 50%,#3A4571 94%,transparent)}
-.sleepers{position:absolute;left:0;right:0;bottom:20px;height:9px;
-  background-image:repeating-linear-gradient(90deg,rgba(245,239,224,.13) 0 7px,transparent 7px 28px)}
-.rail-glow{position:absolute;left:0;right:0;bottom:28px;height:8px;filter:blur(6px);
-  background:linear-gradient(90deg,transparent,rgba(232,176,75,.18),transparent)}
+/* ---- 3D 오브젝트 레이어 ---- */
+.rg-track{position:absolute;left:50%;bottom:6px;width:0;height:0;transform-style:preserve-3d;z-index:7}
+.rg-obj{position:absolute;left:0;bottom:0;transform-style:preserve-3d;will-change:transform}
+.rg-obj>*{position:absolute;bottom:0;left:50%;transform:translateX(-50%)}
 
-/* 도착 깃발 */
-.goal{position:absolute;right:14px;bottom:32px;font-size:1.5rem;opacity:.85;
-  animation:flagWave 2.2s ease-in-out infinite;transform-origin:bottom left}
-@keyframes flagWave{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(6deg)}}
+/* 정답 간판 게이트 — 폭은 반드시 레인 간격보다 좁아야 겹치지 않는다 */
+.gate-in{width:112px;display:flex;flex-direction:column;align-items:center}
+.gate-panel{width:112px;min-height:78px;display:flex;align-items:center;justify-content:center;
+  padding:7px 6px;border-radius:9px;font-weight:800;font-size:1.15rem;line-height:1.12;
+  text-align:center;overflow-wrap:anywhere;hyphens:auto;color:#fff;
+  background:linear-gradient(180deg,#2F6DBE,#1B4A8C);border:3px solid #EAF1FF;
+  box-shadow:0 10px 30px -8px rgba(0,0,0,.75), inset 0 -10px 22px -12px rgba(0,0,0,.6)}
+.gate-panel.sm{font-size:.92rem}
+.gate-panel.xs{font-size:.74rem;line-height:1.08}
+.gate-legs{width:112px;height:62px;position:relative}
+.gate-legs::before,.gate-legs::after{content:"";position:absolute;top:0;bottom:0;width:8px;
+  background:linear-gradient(180deg,#C8D2E8,#7C87A6)}
+.gate-legs::before{left:12px} .gate-legs::after{right:12px}
+.gate-in.hit .gate-panel{background:linear-gradient(180deg,#3FBF63,#1F7C3C);border-color:#D9FFE4}
+.gate-in.miss .gate-panel{background:linear-gradient(180deg,#E5372B,#9E1E15);border-color:#FFD9D5}
 
-/* 기차 */
-.train{position:absolute;bottom:32px;left:8%;font-size:2.5rem;line-height:1;z-index:2;
-  filter:drop-shadow(0 7px 10px rgba(0,0,0,.55))}
-.train.idle{animation:trainIdle 1s ease-in-out infinite}
-@keyframes trainIdle{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-4px) rotate(-2deg)}}
-.train.pass{animation:trainPass 1.05s cubic-bezier(.5,.02,.75,.5) forwards}
-@keyframes trainPass{
-  0%{left:8%;transform:translateY(0)}
-  12%{transform:translateY(-5px)}
-  100%{left:112%;transform:translateY(0)}}
-.train.boom{animation:trainBoom .6s cubic-bezier(.3,1.2,.5,1) forwards}
-@keyframes trainBoom{
-  0%{transform:scale(1) rotate(0);opacity:1}
-  25%{transform:scale(1.3) rotate(-14deg);opacity:1}
-  55%{transform:scale(.95) rotate(18deg) translateY(-6px);opacity:.65}
-  100%{transform:scale(.35) rotate(-32deg) translateY(14px);opacity:0}}
+/* 가운데 차단벽 (안 고르면 충돌) */
+.barrier-in{width:104px;height:76px;border-radius:8px;
+  background:repeating-linear-gradient(45deg,#E5372B 0 16px,#F5EFE0 16px 32px);
+  border:3px solid #2A2A2A;box-shadow:0 10px 26px -8px rgba(0,0,0,.8)}
 
-/* 연기 */
-.puff{position:absolute;bottom:70px;left:10%;font-size:.85rem;opacity:0;z-index:1;color:#B8B2A2}
-.train-scene.running .puff{animation:puffUp 1s ease-out forwards}
-.train-scene.running .puff.p2{animation-delay:.18s}
-.train-scene.running .puff.p3{animation-delay:.36s}
-@keyframes puffUp{
-  0%{opacity:.7;transform:translate(0,0) scale(.6)}
-  100%{opacity:0;transform:translate(46px,-34px) scale(1.5)}}
+/* 코인 */
+.coin-in{width:46px;height:46px;margin-bottom:26px}
+.coin-face{position:absolute;inset:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:1.35rem;color:#7A5310;
+  background:radial-gradient(circle at 35% 30%,#FFE9A8,#E8B04B 55%,#B9821F);
+  border:3px solid #FFF0C4;box-shadow:0 0 16px rgba(232,176,75,.7);
+  animation:coinSpin 1.1s linear infinite}
+@keyframes coinSpin{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}
 
-/* 폭발 */
-.blast{position:absolute;bottom:26px;left:6%;font-size:3.1rem;opacity:0;z-index:3;pointer-events:none}
-.blast.go{animation:blastPop .8s cubic-bezier(.2,1.4,.4,1) forwards}
-@keyframes blastPop{
-  0%{opacity:0;transform:scale(.25)}
-  30%{opacity:1;transform:scale(1.3)}
-  70%{opacity:.9;transform:scale(1.15)}
-  100%{opacity:0;transform:scale(1.75)}}
-.spark{position:absolute;bottom:44px;left:12%;font-size:1rem;opacity:0;z-index:3}
-.spark.go{animation:sparkFly .8s ease-out forwards}
-.spark.s2.go{animation:sparkFly2 .8s ease-out forwards}
-@keyframes sparkFly{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(52px,-46px) rotate(160deg)}}
-@keyframes sparkFly2{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(-46px,-38px) rotate(-150deg)}}
+/* ---- 플레이어 기차 ---- */
+.rg-player{position:absolute;left:50%;bottom:14px;width:88px;margin-left:-44px;z-index:9;
+  transition:transform .16s cubic-bezier(.3,1.4,.5,1)}
+.rg-player.lean-l .rg-train{transform:rotate(-7deg) skewX(4deg)}
+.rg-player.lean-r .rg-train{transform:rotate(7deg) skewX(-4deg)}
+.rg-train{position:relative;width:88px;transition:transform .18s}
+.t-roof{height:12px;margin:0 7px;border-radius:10px 10px 4px 4px;
+  background:linear-gradient(180deg,#F2685E,#C8352A)}
+.t-body{position:relative;height:60px;border-radius:9px 9px 12px 12px;
+  background:linear-gradient(180deg,#E5372B 0%,#B62A20 62%,#7E1C15 100%);
+  border:3px solid #2A1410;display:flex;align-items:flex-start;justify-content:center;gap:7px;padding-top:9px;
+  box-shadow:inset 0 -16px 24px -14px rgba(0,0,0,.9)}
+.t-win{width:25px;height:22px;border-radius:5px;
+  background:linear-gradient(180deg,#CFEBFF,#6FA8D6);border:2px solid #23303F}
+.t-light{position:absolute;bottom:7px;width:12px;height:12px;border-radius:50%;
+  background:radial-gradient(circle,#FFF6D0,#E8B04B);box-shadow:0 0 13px 4px rgba(232,176,75,.75)}
+.t-light.l{left:10px} .t-light.r{right:10px}
+.t-wheels{height:11px;margin:0 5px;border-radius:0 0 7px 7px;background:#1A1A22;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.12)}
+.rg-shadow{position:absolute;left:50%;bottom:-9px;width:94px;height:16px;margin-left:-47px;
+  border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);z-index:-1}
+/* 부스트 불꽃 */
+.rg-flame{position:absolute;left:50%;bottom:-8px;margin-left:-20px;width:40px;text-align:center;
+  font-size:1.5rem;opacity:0;transition:.25s}
+.rg-player.boost .rg-flame{opacity:1;animation:flameFlick .28s ease-in-out infinite alternate}
+@keyframes flameFlick{from{transform:scale(.85) translateY(2px)}to{transform:scale(1.2) translateY(-3px)}}
+.rg-player.crash .rg-train{animation:rgCrash .6s cubic-bezier(.3,1.2,.5,1) forwards}
+@keyframes rgCrash{
+  0%{transform:scale(1) rotate(0)}
+  30%{transform:scale(1.25) rotate(-16deg)}
+  100%{transform:scale(.55) rotate(26deg) translateY(24px);opacity:0}}
+
+/* ---- 속도선 ---- */
+.rg-speed{position:absolute;inset:0;pointer-events:none;z-index:8;opacity:0;transition:opacity .3s;
+  background:
+    repeating-linear-gradient(90deg,transparent 0 34px,rgba(255,255,255,.14) 34px 36px,transparent 36px 70px)}
+.rg-stage.boosting .rg-speed{opacity:.55;animation:rgSpeed .3s linear infinite}
+@keyframes rgSpeed{from{transform:scaleY(1)}to{transform:scaleY(1.06)}}
+
+/* ---- HUD ---- */
+.rg-hud{position:absolute;inset:0;pointer-events:none;z-index:20}
+.rg-prompt{position:absolute;left:10px;right:10px;top:10px;text-align:center;
+  background:linear-gradient(180deg,rgba(10,14,30,.9),rgba(10,14,30,.62));
+  border:1px solid rgba(245,239,224,.16);border-radius:14px;padding:9px 12px;
+  backdrop-filter:blur(3px)}
+.rg-plabel{font-size:.6rem;text-transform:uppercase;letter-spacing:1.6px;color:var(--gold);font-weight:800}
+.rg-pword{font-size:1.75rem;font-weight:900;line-height:1.15;margin-top:2px;overflow-wrap:anywhere}
+.rg-pword.long{font-size:1.3rem}
+.rg-ppron{font-size:.82rem;color:var(--gold);font-weight:700;margin-top:1px}
+.rg-coins{position:absolute;left:12px;top:100px;font-weight:900;font-size:1rem;color:var(--gold);
+  display:flex;align-items:center;gap:6px;text-shadow:0 2px 6px rgba(0,0,0,.9)}
+/* 🪙 이모지는 기기에 따라 네모로 깨져서 CSS로 직접 그린 코인을 쓴다 */
+.mini-coin{width:17px;height:17px;border-radius:50%;flex:none;display:inline-flex;
+  align-items:center;justify-content:center;font-size:.62rem;color:#7A5310;
+  background:radial-gradient(circle at 35% 30%,#FFE9A8,#E8B04B 60%,#B9821F);
+  border:2px solid #FFF0C4;box-shadow:0 0 8px rgba(232,176,75,.6)}
+.rg-mult{position:absolute;right:12px;top:100px;font-weight:900;font-size:1rem;color:var(--chili-soft);
+  text-shadow:0 2px 6px rgba(0,0,0,.9);opacity:0;transition:.25s}
+.rg-mult.on{opacity:1;animation:multPulse .6s ease-in-out infinite alternate}
+@keyframes multPulse{from{transform:scale(1)}to{transform:scale(1.15)}}
+.rg-hint{position:absolute;left:8px;right:8px;bottom:6px;text-align:center;font-size:.78rem;font-weight:700;
+  color:var(--cream);text-shadow:0 2px 8px rgba(0,0,0,.95);transition:opacity .4s}
+.rg-hint.gone{opacity:0}
+.rg-arrows{position:absolute;inset:0;display:flex;z-index:15}
+.rg-arrows i{flex:1;display:flex;align-items:center;justify-content:center;font-style:normal;
+  font-size:2rem;color:rgba(245,239,224,.16)}
+
+/* 정답/오답 화면 플래시 */
+.rg-flash{position:absolute;inset:0;pointer-events:none;z-index:25;opacity:0}
+.rg-flash.good{background:radial-gradient(circle,rgba(79,190,108,.5),transparent 70%);animation:rgFlash .5s ease-out}
+.rg-flash.bad{background:radial-gradient(circle,rgba(229,55,43,.6),transparent 72%);animation:rgFlash .55s ease-out}
+@keyframes rgFlash{0%{opacity:.95}100%{opacity:0}}
+.rg-boom{position:absolute;left:50%;bottom:40px;margin-left:-60px;width:120px;text-align:center;
+  font-size:4rem;opacity:0;z-index:26;pointer-events:none}
+.rg-boom.go{animation:rgBoom .8s cubic-bezier(.2,1.4,.4,1) forwards}
+@keyframes rgBoom{0%{opacity:0;transform:scale(.3)}30%{opacity:1;transform:scale(1.35)}100%{opacity:0;transform:scale(1.9)}}
+
+/* 획득/차감 금액 플로팅 */
+.won-pop{position:absolute;left:50%;top:104px;transform:translateX(-50%);z-index:27;
+  font-weight:900;font-size:1.5rem;opacity:0;pointer-events:none;text-shadow:0 3px 10px rgba(0,0,0,.9)}
+.won-pop.go{animation:wonFloat 1.1s ease-out forwards}
+@keyframes wonFloat{
+  0%{opacity:0;transform:translate(-50%,14px) scale(.7)}
+  25%{opacity:1;transform:translate(-50%,0) scale(1.15)}
+  70%{opacity:1;transform:translate(-50%,-10px) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-34px) scale(.95)}}
+.won-pop.good{color:var(--leaf-soft)}
+.won-pop.bad{color:var(--chili-soft)}
+.won-pop.coin{color:var(--gold);font-size:1.15rem;top:150px}
 
 /* 화면 진동 */
 .shake{animation:shakeX .5s cubic-bezier(.36,.07,.19,.97)}
@@ -269,20 +384,8 @@ body{
   40%{transform:translateX(-7px)}56%{transform:translateX(6px)}
   72%{transform:translateX(-4px)}88%{transform:translateX(2px)}}
 
-/* 획득/차감 금액 플로팅 */
-.won-pop{position:absolute;left:50%;top:16px;transform:translateX(-50%);z-index:4;
-  font-weight:900;font-size:1.25rem;opacity:0;pointer-events:none;text-shadow:0 3px 8px rgba(0,0,0,.6)}
-.won-pop.go{animation:wonFloat 1.1s ease-out forwards}
-@keyframes wonFloat{
-  0%{opacity:0;transform:translate(-50%,10px) scale(.7)}
-  25%{opacity:1;transform:translate(-50%,0) scale(1.1)}
-  70%{opacity:1;transform:translate(-50%,-8px) scale(1)}
-  100%{opacity:0;transform:translate(-50%,-26px) scale(.95)}}
-.won-pop.good{color:var(--leaf-soft)}
-.won-pop.bad{color:var(--chili-soft)}
-
 /* 하트 라이프 */
-.lives{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:20px;font-size:1.55rem}
+.lives{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;font-size:1.55rem}
 .lives .heart{line-height:1;filter:drop-shadow(0 4px 7px rgba(229,55,43,.45));transition:.3s}
 .lives .heart.lost{filter:grayscale(1) brightness(.6);opacity:.28;transform:scale(.78)}
 .lives .heart.losing{animation:heartBreak .65s cubic-bezier(.3,1.2,.5,1) forwards}
@@ -370,8 +473,8 @@ body{
 @media(max-width:400px){
   .prompt .pword{font-size:1.9rem}
   .login img{width:150px}
-  .train-scene{height:114px}
-  .train{font-size:2.1rem}
+  .rg-pword{font-size:1.5rem}
+  .rg-pword.long{font-size:1.15rem}
   .options.duo .opt{min-height:82px;font-size:.94rem;padding:12px 9px}
   .lives{font-size:1.35rem;gap:10px}
 }
