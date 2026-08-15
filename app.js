@@ -442,12 +442,39 @@ const $ = (sel,el=document)=>el.querySelector(sel);
 const shuffle = a => a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
 const wonFmt = n => "₩"+n.toLocaleString('ko-KR');
 
+/* ---------- 퀴즈용 정규화 ----------
+   시트의 뜻 칸에는 변형("가다 / 가요")·동의어("gestion, administration")·
+   설명("to grill (grilled fish)")이 섞여 있다. 그대로 보기로 쓰면 정답만 유독 길어져서
+   뜻을 몰라도 눈으로 골라진다. 화면 표시는 원본(ko/mean)을 쓰고, 출제·보기에만 quiz* 를 쓴다. */
+const QUIZ_MEAN_MAX = 40;
+
+function normalizeQuizText(s){
+  return String(s||'')
+    .split(' / ')[0]            // 변형 나열 → 첫 형태만 (공백 없는 '은/는'은 건드리지 않음)
+    .replace(/\([^)]*\)/g, '')  // 괄호 설명 제거
+    .split(',')[0]              // 동의어 나열 → 첫 항만
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function attachQuizFields(w){
+  const quizKo = normalizeQuizText(w.ko);
+  const quizMean = normalizeQuizText(w.mean);
+  const quizOk = w.type !== 'sentence'
+    && w.pos !== '문법'
+    && !!quizKo && !!quizMean
+    && /[가-힣]/.test(quizKo)      // 한국어 칸에 한글이 없으면 행이 뒤집힌 것
+    && !/[가-힣]/.test(quizMean)   // 뜻에 한글이 남아 있으면 정답이 유출된 것
+    && quizMean.length <= QUIZ_MEAN_MAX;
+  return {...w, quizKo, quizMean, quizOk};
+}
+
 function loadStudent(key, langOverride){
   const s = SAMPLE[key];
   const lang = langOverride || s.lang;
   student = {
     name:s.name, lang,
-    words: s.words.map((w,i)=>({...w, id:i, correctStreak:0, seen:0, totalCorrect:0, status:"new"}))
+    words: s.words.map((w,i)=>({...attachQuizFields(w), id:i, correctStreak:0, seen:0, totalCorrect:0, status:"new"}))
   };
   L = T[lang];
   bank = 0; bestStreak = 0;
@@ -458,7 +485,7 @@ function loadStudent(key, langOverride){
 function setupStudent(row, words, lang){
   student = {
     name: row.name, lang,
-    words: words.map((w,i)=>({...w, id:i, correctStreak:0, seen:0, totalCorrect:0, status:"new"}))
+    words: words.map((w,i)=>({...attachQuizFields(w), id:i, correctStreak:0, seen:0, totalCorrect:0, status:"new"}))
   };
   L = T[lang] || T.fr;
   bank = 0; bestStreak = 0;
@@ -509,7 +536,8 @@ async function restoreProgress(email){
     customWords.forEach((cw, i)=>{
       const p = srs[cw.ko] || {};
       student.words.push({
-        id: nextId++, date: cw.dateAdded, ko: cw.ko, pron:"", mean: cw.mean, type:"word",
+        ...attachQuizFields({ko: cw.ko, mean: cw.mean, type:"word"}),
+        id: nextId++, date: cw.dateAdded, pron:"",
         source:"custom", color: cw.color || "", order: (cw.order ?? i),
         correctStreak: p.correctStreak||0, totalCorrect: p.totalCorrect||0,
         seen: p.seen||0, status: p.status||"new"
@@ -1070,8 +1098,7 @@ function saveWordForm(editing){
   }
 
   if(editing){
-    editing.ko = ko;
-    editing.mean = mean;
+    Object.assign(editing, attachQuizFields({...editing, ko, mean}));
     editing.color = color;
     persistCustomWords();
     persistProgress(); // srsProgress가 단어 텍스트를 키로 쓰므로, 재저장하면 기록이 새 키로 이관됨
@@ -1084,7 +1111,8 @@ function saveWordForm(editing){
     ? Math.max(...student.words.map(w=>w.id)) + 1
     : 0;
   const newWord = {
-    id:newId, date:today, ko, pron:"", mean, type:"word",
+    ...attachQuizFields({ko, mean, type:"word"}),
+    id:newId, date:today, pron:"",
     source:"custom", color, order: student.words.filter(w=>w.source==='custom').length,
     correctStreak:0, seen:0, totalCorrect:0, status:"new"
   };
@@ -1122,7 +1150,8 @@ function renderHelp(){
    ===================================================================== */
 
 function reviewPool(mode){
-  const words = quizPool(student.words);
+  // 복습은 출제 제한과 무관 — 퀴즈에 안 나오는 문법 규칙·설명형 단어도 카드로는 보여준다
+  const words = student.words.filter(w=>w.type!=="sentence" && w.ko && w.mean);
   if(mode==='all') return words;
   const due = words.filter(w=>w.status!=="master");
   return due.length ? due : words;   // 전부 마스터면 그냥 전체 보여주기
@@ -1253,27 +1282,53 @@ function renderReviewDone(){
 const LIVES_MAX = 3;          // 하트 개수
 const SESSION_SIZE = 10;      // 한 판 정거장 수
 
-/* 문장 제외 — 퀴즈에 쓸 수 있는 단어만 추림 */
+/* 출제 가능한 단어만 추림 — 문장·문법 규칙·정답 유출 항목은 attachQuizFields가 걸러둠 */
 function quizPool(list){
-  return (list||[]).filter(w=>w && w.type!=="sentence" && w.ko && w.mean);
+  return (list||[]).filter(w=>w && w.quizOk);
+}
+
+/* 오답 보기 고르기 — 의미가 가까운 것부터 단계적으로 뽑는다.
+   전체에서 무작위로 뽑으면 품사·주제가 동떨어져 소거법으로 풀리기 때문. */
+function pickDistractors(w, allWords, field, answer, need){
+  const key = s => s.toLowerCase();
+  const taken = new Set([key(answer)]);
+  const out = [];
+  const rest = allWords.filter(x=>x.id!==w.id && x[field]);
+
+  // 정답만 유독 길거나 짧으면 뜻을 몰라도 골라지므로 길이가 비슷한 후보를 우선한다
+  const nearestByLength = list => [...list].sort((a,b)=>
+    Math.abs(a[field].length-answer.length) - Math.abs(b[field].length-answer.length));
+
+  const tiers = [
+    rest.filter(x=>x.pos && x.pos===w.pos && x.category && x.category===w.category),
+    rest.filter(x=>x.pos && x.pos===w.pos),
+    rest.filter(x=>x.category && x.category===w.category),
+    rest,
+  ];
+  for(const tier of tiers){
+    if(out.length >= need) break;
+    // 길이가 가까운 상위 후보군 안에서 무작위 — 매번 똑같은 오답이 나오지 않게
+    for(const x of shuffle(nearestByLength(tier).slice(0, Math.max(need*4, 12)))){
+      if(out.length >= need) break;
+      if(taken.has(key(x[field]))) continue;   // 정규화 후 뜻이 겹치는 단어는 정답이 2개가 됨
+      taken.add(key(x[field]));
+      out.push(x[field]);
+    }
+  }
+  return out;
 }
 
 function buildQuestion(w, allWords, nOpt=2){
   // 방향 랜덤: ko->mean (뜻 고르기) 또는 mean->ko (한국어 고르기)
   const dir = Math.random()<0.5 ? "ko2mean" : "mean2ko";
-  const answer = dir==="ko2mean" ? w.mean : w.ko;
-  const promptText = dir==="ko2mean" ? w.ko : w.mean;
+  const field = dir==="ko2mean" ? "quizMean" : "quizKo";
+  const answer = w[field];
+  const promptText = dir==="ko2mean" ? w.quizKo : w.quizMean;
 
-  // 오답 후보: 단어에서만 (문장은 절대 보기로 나오지 않음)
-  const field = dir==="ko2mean" ? "mean" : "ko";
-  let candidates = allWords
-    .filter(x=>x.id!==w.id && x[field] && x[field]!==answer)
-    .map(x=>x[field]);
-  candidates = [...new Set(candidates)];
   // 기차 게임은 2지선다(오답 1개), 단어 퀴즈는 4지선다(오답 3개)
   // 후보가 모자라면 있는 만큼만 사용
   // (다른 학생 데이터에서 빌려오지 않음 — 데모/타 학생 콘텐츠 혼입 방지)
-  const distractors = shuffle(candidates).slice(0, nOpt-1);
+  const distractors = pickDistractors(w, allWords, field, answer, nOpt-1);
   const options = shuffle([answer, ...distractors]);
   return {w, dir, promptText, answer, options,
           label: dir==="mean2ko" ? L.promptMean : L.promptKo};
