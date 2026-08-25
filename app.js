@@ -319,16 +319,16 @@ const SAMPLE = {
 
 /* ---------- 상태 ---------- */
 let student = null;   // {name, lang, words:[...] with runtime stats}
-let L = T.fr;         // current language pack
+let L = T.en;         // current language pack — 공개 배포 기본은 영어
 function detectInitialLang(){
   try{
     const saved = localStorage.getItem('blabla_login_lang');
     if(saved === 'fr' || saved === 'en') return saved;
   }catch(e){}
   try{
-    const browserLang = (navigator.language || navigator.languages?.[0] || 'fr').split('-')[0];
-    return (browserLang === 'en') ? 'en' : 'fr'; // T 객체에 fr/en만 있으므로 그 외는 전부 fr
-  }catch(e){ return 'fr'; }
+    const browserLang = (navigator.language || navigator.languages?.[0] || 'en').split('-')[0];
+    return (browserLang === 'fr') ? 'fr' : 'en'; // T 객체에 fr/en만 있다. 기본은 영어
+  }catch(e){ return 'en'; }
 }
 let loginLang = detectInitialLang();  // 로그인 화면 전용 미리보기 언어 (로그인 전에만 사용)
 let session = null;   // 🎯 퀴즈 세션
@@ -536,6 +536,13 @@ async function buildWords(rows){
    - 진도는 저장하지 않고, 로그인해도 이관하지 않는다
    - 카운터는 sessionStorage — 탭을 닫으면 사라지고 localStorage에 흔적이 남지 않는다
    ===================================================================== */
+/* 공용 단어 팩 — 게스트 체험과 오픈 로그인이 같은 걸 쓴다.
+   서울 공용팩(D19)이 생기면 이 함수 하나만 갈아끼우면 된다. */
+const OPEN_PACK_ID = 's-open';
+function openPackWords(lang){
+  return (lang === 'fr') ? SAMPLE.jessica.words : SAMPLE.corine.words;
+}
+
 const GUEST_Q_PER_WALL = 30;   // 누적 문제 수
 const GUEST_S_PER_WALL = 3;    // 완료한 세션 수 (퀴즈·플래시 공통)
 const GUEST_KEY = 'vocabank_guest';
@@ -586,9 +593,8 @@ async function startGuest(){
   session = null; review = null;
   const lang = (loginLang === 'en') ? 'en' : 'fr';
   L = T[lang];
-  // 공용팩(서울)이 아직 없으므로 기존 SAMPLE을 쓴다. 학생 실명은 화면에 내보내지 않는다
-  const sampleWords = (lang === 'en') ? SAMPLE.corine.words : SAMPLE.jessica.words;
-  student = { name: L.guestName, lang, words: await buildWords(sampleWords) };
+  // 오픈 로그인과 같은 공용 팩. 학생 실명은 화면에 내보내지 않는다
+  student = { name: L.guestName, lang, words: await buildWords(openPackWords(lang)) };
   bank = 0; bestStreak = 0;
   document.documentElement.lang = lang;
   renderHome();
@@ -632,7 +638,7 @@ function renderGuestWall(onContinue){
 /* ---------- 실제 학생: 구글시트에서 받아온 단어로 세팅 ---------- */
 async function setupStudent(invite, words, lang){
   student = { name: invite.name, lang, words: await buildWords(words) };
-  L = T[lang] || T.fr;
+  L = T[lang] || T.en;
   bank = 0; bestStreak = 0;
   document.documentElement.lang = lang;
 }
@@ -849,29 +855,40 @@ async function handleLoginSuccess(user){
     await window.fb.signOut(window.fb.auth);
     return;
   }
-  if(!invite){
-    alert(L.notRegistered);
-    currentUserEmail = null;
-    await window.fb.signOut(window.fb.auth);
-    return;
+  // 오픈 모드 — 명단에 없어도 돌려보내지 않는다. 공용 팩으로 시작하고
+  // 「단어 추가」로 자기 단어를 쌓는다. 진도·원은 등록 학생과 똑같이 저장된다.
+  // 개인 시트(vocabCsvUrl)는 invites 에 있는 학생에게만 붙는다.
+  const isOpenUser = !invite;
+  if(isOpenUser){
+    invite = {
+      name: user.displayName || String(email).split('@')[0],
+      lang: (loginLang === 'fr') ? 'fr' : 'en',
+      packId: OPEN_PACK_ID,
+      vocabCsvUrl: null
+    };
   }
   currentUserEmail = email;
   currentUid = user.uid;                 // Firestore 문서 키는 uid. 콘솔 목록에 이메일이 안 보인다
   currentPackId = invite.packId || null;
   pending = new Map();
-  const lang = (invite.lang||'fr').toLowerCase();
+  const lang = (invite.lang||'en').toLowerCase();
   renderVocabLoading(lang);
   progressLocked = false;
 
-  // ── 1단계: 단어 CSV(구글시트) 불러오기 ──
-  // 여기서 실패하면 = 진짜로 단어가 준비 안 됨 → "단어 준비 안 됨" 화면
+  // ── 1단계: 단어 불러오기 ──
+  // 오픈 사용자는 공용 팩이라 네트워크가 필요 없다.
+  // 등록 학생은 자기 시트를 읽고, 실패하면 = 진짜로 단어가 준비 안 됨 → 안내 화면
   let words;
-  try{
-    words = await getStudentVocab(invite);
-  } catch(e){
-    console.error('① 단어 CSV 로딩 실패 (구글시트/CSV 링크 확인 필요):', e);
-    renderVocabNotReady(lang);
-    return;
+  if(isOpenUser){
+    words = openPackWords(lang);
+  } else {
+    try{
+      words = await getStudentVocab(invite);
+    } catch(e){
+      console.error('① 단어 CSV 로딩 실패 (구글시트/CSV 링크 확인 필요):', e);
+      renderVocabNotReady(lang);
+      return;
+    }
   }
   await setupStudent(invite, words, lang);
 
@@ -972,7 +989,7 @@ async function signInWithGoogle(Lx){
     console.error('구글 로그인 실패:', e);
     // 팝업을 직접 닫은 것은 오류가 아니다
     if(e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
-    alert((Lx || T.fr).loginError + (e.code ? '\n(' + e.code + ')' : ''));
+    alert((Lx || T.en).loginError + (e.code ? '\n(' + e.code + ')' : ''));
   }
 }
 
@@ -1065,7 +1082,7 @@ function renderBootError(detail){
    invite 의 언어팩(T[lang])을 직접 쓴다. */
 function renderVocabLoading(lang){
   botnav.classList.add('hidden');
-  const Lx = T[lang] || T.fr;
+  const Lx = T[lang] || T.en;
   app.innerHTML = `
     <div class="result">
       <img src="${IMG.study}" alt="">
@@ -1075,7 +1092,7 @@ function renderVocabLoading(lang){
 
 function renderVocabNotReady(lang){
   botnav.classList.add('hidden');
-  const Lx = T[lang] || T.fr;
+  const Lx = T[lang] || T.en;
   app.innerHTML = `
     <div class="result">
       <img src="${IMG.surprised}" alt="">
@@ -2055,9 +2072,14 @@ async function shareResult(){
 }
 
 /* ---------- 하단 네비 ---------- */
+const NAV_LABEL = {home:'navHome', words:'navWords', learned:'navLearned',
+                   known:'navKnown', help:'navHelp'};
 function setNav(active){
   botnav.querySelectorAll('button').forEach(b=>{
     b.classList.toggle('active', b.dataset.nav===active);
+    // 문구가 index.html 에 프랑스어로 박혀 있어서 영어 사용자에게도 프랑스어가 보였다
+    const label = b.querySelector('.bl');
+    if(label) label.textContent = L[NAV_LABEL[b.dataset.nav]] || label.textContent;
   });
 }
 botnav.querySelectorAll('button').forEach(b=>{
