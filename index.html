@@ -8,12 +8,12 @@
      외부 출처를 추가할 때는 반드시 콘솔에서 위반 0건을 확인하고 커밋할 것. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' https://www.gstatic.com;
+  script-src 'self' https://www.gstatic.com https://apis.google.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' data: blob:;
   font-src 'self' https://fonts.gstatic.com;
   connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://docs.google.com https://*.googleusercontent.com;
-  frame-src https://vocabank-db55a.firebaseapp.com https://accounts.google.com;
+  frame-src https://vocabank-db55a.firebaseapp.com https://accounts.google.com https://apis.google.com;
   object-src 'none';
   base-uri 'self';
   form-action 'none'

@@ -130,6 +130,7 @@ const T = {
     moveUp: "Monter",
     moveDown: "Descendre",
     rightsNote: "Tous droits réservés. Blabla Korea est une marque de Jonghyuk Lee.",
+    loginError: "La connexion a échoué. Réessaie dans un instant.",
     /* 🧪 mode invité (v3 §5) */
     guestBtn: "Découvrir en invité",
     guestNoSave: "Ta progression ne sera pas enregistrée.",
@@ -244,6 +245,7 @@ const T = {
     moveUp: "Move up",
     moveDown: "Move down",
     rightsNote: "All rights reserved. Blabla Korea is a trademark of Jonghyuk Lee.",
+    loginError: "Sign-in failed. Please try again in a moment.",
     /* 🧪 guest mode (v3 §5) */
     guestBtn: "Try as a guest",
     guestNoSave: "Your progress won't be saved.",
@@ -620,12 +622,8 @@ function renderGuestWall(onContinue){
       </div>
     </div>`;
   const loginBtn = $('#wallLoginBtn');
-  if(loginBtn) loginBtn.onclick = async ()=>{
-    try{
-      await window.fb.signInWithPopup(window.fb.auth, window.fb.googleProvider);
-      // 성공하면 onAuthStateChanged -> handleLoginSuccess(). 게스트 진도는 이관하지 않는다
-    }catch(e){ console.error(e); alert('로그인 중 오류가 발생했습니다.'); }
-  };
+  // 성공하면 onAuthStateChanged -> handleLoginSuccess(). 게스트 진도는 이관하지 않는다
+  if(loginBtn) loginBtn.onclick = ()=>signInWithGoogle(L);
   const moreBtn = $('#wallMoreBtn');
   if(moreBtn) moreBtn.onclick = ()=>{ if(onContinue) onContinue(); else renderHome(); };
   $('#wallBackBtn').onclick = exitGuest;
@@ -965,6 +963,19 @@ function isInAppBrowser(){
   return /KAKAOTALK|Instagram|FBAN|FBAV|Line\/|NAVER\(inapp/i.test(ua);
 }
 
+/* 구글 로그인 한 곳으로 모은다. 실패 코드를 삼키면 원인을 알 수 없다 —
+   auth/internal-error 는 대개 CSP 가 apis.google.com 을 막았을 때 난다. */
+async function signInWithGoogle(Lx){
+  try{
+    await window.fb.signInWithPopup(window.fb.auth, window.fb.googleProvider);
+  }catch(e){
+    console.error('구글 로그인 실패:', e);
+    // 팝업을 직접 닫은 것은 오류가 아니다
+    if(e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    alert((Lx || T.fr).loginError + (e.code ? '\n(' + e.code + ')' : ''));
+  }
+}
+
 function renderLogin(){
   botnav.classList.add('hidden');
   const showDemo = new URLSearchParams(location.search).get('demo')==='true';
@@ -1015,15 +1026,7 @@ function renderLogin(){
       }
     };
   } else {
-    $('#googleBtn').onclick = async ()=>{
-      try{
-        await window.fb.signInWithPopup(window.fb.auth, window.fb.googleProvider);
-        // 성공하면 onAuthStateChanged -> handleLoginSuccess() 로 이어짐
-      } catch(e){
-        console.error(e);
-        alert('로그인 중 오류가 발생했습니다.');
-      }
-    };
+    $('#googleBtn').onclick = ()=>signInWithGoogle(Lx);
   }
   // 게스트는 인앱 브라우저에서도 쓸 수 있다 (구글 팝업이 필요 없다)
   $('#guestBtn').onclick = ()=>startGuest();
