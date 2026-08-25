@@ -3,7 +3,9 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemove
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+  writeBatch, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -18,12 +20,19 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+
+// 오프라인 지속성은 Firestore SDK에 내장돼 있고 이미 IndexedDB를 쓴다.
+// 캐시를 직접 만들지 않는다 — 켜기만 하면 로컬 캐시·오프라인 읽기·재연결 동기화가 자동이다.
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
+
 const googleProvider = new GoogleAuthProvider();
 
 window.fb = {
   auth, db, googleProvider,
   signInWithPopup, signOut, onAuthStateChanged,
-  doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemove
+  doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+  writeBatch, serverTimestamp, arrayUnion, arrayRemove
 };
 window.dispatchEvent(new Event('fb-ready'));

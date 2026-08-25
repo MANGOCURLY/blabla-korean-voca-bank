@@ -3,36 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- CSP: GitHub Pages는 커스텀 HTTP 헤더를 못 쓰므로 meta 태그로 넣는다.
+     meta 방식은 report-only 가 없어서, 여기 빠진 출처는 곧바로 기능이 죽는다.
+     외부 출처를 추가할 때는 반드시 콘솔에서 위반 0건을 확인하고 커밋할 것. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' https://www.gstatic.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  img-src 'self' data: blob:;
+  font-src 'self' https://fonts.gstatic.com;
+  connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://docs.google.com https://*.googleusercontent.com;
+  frame-src https://vocabank-db55a.firebaseapp.com https://accounts.google.com;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'none'
+">
 <title>Blabla Korea · Voca Bank 🌶️</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+/* =====================================================================
+   Blabla Korea 브랜드 토큰 (blablakorea.fr · 2026-08-25 확정)
+   라이트 한 장뿐이다. [data-theme] 토글도, 다크 팔레트도 두지 않는다.
+   ===================================================================== */
 :root{
-  --navy:#151A2E;        /* deep background */
-  --navy-2:#1E2540;      /* card */
-  --navy-3:#28325A;      /* raised */
-  --cream:#F5EFE0;       /* text */
-  --cream-dim:#B8B2A2;   /* muted text */
-  --gold:#E8B04B;        /* accent / money */
-  --gold-deep:#C9902F;
-  --chili:#E5372B;       /* wrong / chili red */
-  --chili-soft:#F2685E;
-  --leaf:#2E8B45;        /* correct green */
-  --leaf-soft:#4FBE6C;
-  --line:rgba(245,239,224,.10);
-  --shadow:0 18px 40px -18px rgba(0,0,0,.7);
+  color-scheme: light;
+
+  --bg:             #F5ECE9;   /* fond rose ivoiré — 앱 바탕 */
+  --bg-grad-1:      #F7F2EC;   /* fond crème */
+  --bg-grad-2:      #F3F1F2;   /* fond ivoire froid */
+  --surface:        #FFFFFF;   /* 카드 면 */
+  --surface-raised: #F7F2EC;   /* 올라온 면 */
+  --surface-sunken: #F3F1F2;   /* 움푹한 면 (입력·보기) */
+
+  --text:           #39343D;   /* dark grey — 본문 */
+  --text-muted:     #5A535C;   /* dark grey를 읽히게 밝힌 값. #DAD7DB 는 글자로 쓰지 않는다 */
+  --text-inverse:   #FFFFFF;
+
+  --border:         #DAD7DB;   /* light grey — 테두리 전용 */
+  --shadow:         0 18px 40px -18px rgba(61,0,34,.18);
+
+  --accent:         #A25379;   /* rose — 큰 버튼·강조 */
+  --accent-strong:  #3D0022;   /* very dark rose — 제목·작은 글씨 (rose는 흰 배경에서 대비 부족) */
+  --accent-contrast:#FFFFFF;
+
+  --success:        #1E7A4C;
+  --success-soft:   #E6F4EC;
+  --danger:         #B3261E;
+  --danger-soft:    #FDECEA;
+
+  --focus-ring:     #A25379;
+
+  /* rgba는 변수 보간이 안 되므로 알파가 필요한 자리는 토큰으로 미리 만든다 */
+  --accent-soft:    rgba(162,83,121,.13);
+  --accent-veil:    rgba(162,83,121,.34);
+  --danger-line:    rgba(179,38,30,.32);
+  --danger-veil:    rgba(179,38,30,.40);
+  --scrim:          rgba(61,0,34,.22);
+  --nav-bg:         rgba(247,242,236,.93);
+  --img-shadow:     drop-shadow(0 12px 22px rgba(61,0,34,.16));
+  --tag-custom-bg:  rgba(107,92,214,.14);
+  --tag-custom-fg:  #4B3FC4;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{
-  font-family:"Segoe UI",-apple-system,system-ui,sans-serif;
+  font-family:Poppins,"Segoe UI",-apple-system,system-ui,sans-serif;
   background:
-    radial-gradient(1200px 700px at 80% -10%, rgba(232,176,75,.10), transparent 60%),
-    radial-gradient(900px 600px at -10% 110%, rgba(229,55,43,.10), transparent 55%),
-    var(--navy);
-  color:var(--cream);
+    radial-gradient(1000px 620px at 92% 2%, var(--accent-soft), transparent 58%),
+    radial-gradient(1200px 700px at 80% -10%, var(--bg-grad-1), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, var(--bg-grad-2), transparent 55%),
+    var(--bg);
+  color:var(--text);
   min-height:100%;
   overflow-x:hidden;
 }
-/* Korean display accent font via system fallback */
+/* 한국어 본문은 시스템 폰트 — Poppins / Libre Baskerville 은 한글을 못 그린다 */
 .kr{font-family:"Apple SD Gothic Neo","Malgun Gothic","Segoe UI",sans-serif}
 
 .wrap{max-width:640px;margin:0 auto;padding:20px 18px 90px;position:relative}
@@ -40,360 +87,158 @@ body{
 /* ---------- top bar ---------- */
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px}
-.brand .dot{font-size:1.4rem;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
-.brand small{display:block;font-weight:600;font-size:.62rem;color:var(--gold);letter-spacing:2px;text-transform:uppercase}
+.brand .dot{font-size:1.4rem;filter:drop-shadow(0 2px 3px var(--accent-soft))}
+.brand small{display:block;font-family:"Libre Baskerville",Georgia,serif;font-weight:700;font-size:.62rem;
+  color:var(--accent-strong);letter-spacing:2px;text-transform:uppercase}
 .bank-chip{
-  display:flex;align-items:center;gap:7px;background:linear-gradient(180deg,var(--navy-3),var(--navy-2));
-  border:1px solid var(--line);border-radius:999px;padding:7px 13px;box-shadow:var(--shadow);
-  font-variant-numeric:tabular-nums;font-weight:800;color:var(--gold)
+  display:flex;align-items:center;gap:7px;background:linear-gradient(180deg,var(--surface-raised),var(--surface));
+  border:1px solid var(--border);border-radius:999px;padding:7px 13px;box-shadow:var(--shadow);
+  font-variant-numeric:tabular-nums;font-weight:800;color:var(--accent-strong)
 }
 .bank-chip .coin{font-size:1rem}
 .bank-chip .delta{font-size:.72rem;font-weight:700;opacity:0;transition:.3s;margin-left:2px}
-.bank-chip .delta.up{color:var(--leaf-soft);opacity:1}
-.bank-chip .delta.down{color:var(--chili-soft);opacity:1}
+.bank-chip .delta.up{color:var(--success);opacity:1}
+.bank-chip .delta.down{color:var(--danger);opacity:1}
 
 /* ---------- cards / buttons ---------- */
-.card{background:linear-gradient(180deg,var(--navy-2),#191F38);border:1px solid var(--line);
+.card{background:linear-gradient(180deg,var(--surface),var(--surface-raised));border:1px solid var(--border);
   border-radius:20px;padding:22px;box-shadow:var(--shadow)}
 .btn{appearance:none;border:none;cursor:pointer;font-family:inherit;font-weight:700;
   border-radius:14px;padding:14px 18px;font-size:1rem;transition:transform .12s,box-shadow .2s,background .2s;
-  width:100%;color:var(--navy);background:var(--gold);box-shadow:0 8px 18px -8px rgba(232,176,75,.7)}
+  width:100%;color:var(--accent-contrast);background:var(--accent);box-shadow:0 8px 18px -8px var(--accent-veil)}
 .btn:hover{transform:translateY(-2px)}
 .btn:active{transform:translateY(0)}
-.btn.secondary{background:var(--navy-3);color:var(--cream);box-shadow:none;border:1px solid var(--line)}
-.btn.ghost{background:transparent;color:var(--cream-dim);box-shadow:none;border:1px solid var(--line)}
-.btn.chili{background:var(--chili);color:#fff;box-shadow:0 8px 18px -8px rgba(229,55,43,.7)}
+.btn.secondary{background:var(--surface-raised);color:var(--text);box-shadow:none;border:1px solid var(--border)}
+.btn.ghost{background:transparent;color:var(--text-muted);box-shadow:none;border:1px solid var(--border)}
+.btn.chili{background:var(--danger);color:var(--text-inverse);box-shadow:0 8px 18px -8px var(--danger-veil)}
 .btn-row{display:flex;gap:10px;margin-top:12px}
 .btn-row .btn{width:auto;flex:1}
 
 .hidden{display:none!important}
 
 /* 진도 저장 잠금(서버 연결 실패) 안내 배너 */
-.save-warning{background:rgba(229,55,43,.12);border:1px solid rgba(242,104,94,.4);color:var(--chili-soft);
+.save-warning{background:var(--danger-soft);border:1px solid var(--danger-line);color:var(--danger);
   border-radius:12px;padding:11px 14px;font-size:.82rem;line-height:1.5;margin-bottom:14px}
 
 /* ---------- login ---------- */
 .login{min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
-.login img{width:190px;filter:drop-shadow(0 12px 22px rgba(0,0,0,.45));animation:float 4s ease-in-out infinite}
+.login img{width:190px;filter:var(--img-shadow);animation:float 4s ease-in-out infinite}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-.login h1{font-size:2rem;line-height:1.1;margin-top:6px}
-.login h1 span{color:var(--gold)}
-.login p{color:var(--cream-dim);max-width:340px;margin:4px 0 22px}
+.login h1{font-family:"Libre Baskerville",Georgia,serif;font-size:1.9rem;line-height:1.25;margin-top:6px;color:var(--accent-strong)}
+.login h1 span{color:var(--accent)}
+.login p{color:var(--text-muted);max-width:340px;margin:4px 0 22px}
 .google-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#3c4043;
-  border:none;border-radius:14px;padding:14px 20px;font-weight:700;font-size:1rem;cursor:pointer;
-  box-shadow:0 10px 24px -10px rgba(0,0,0,.6);transition:transform .12s;width:100%;max-width:320px}
+  border:1px solid var(--border);border-radius:14px;padding:14px 20px;font-weight:700;font-size:1rem;cursor:pointer;
+  box-shadow:0 10px 24px -12px var(--scrim);transition:transform .12s;width:100%;max-width:320px}
 .google-btn:hover{transform:translateY(-2px)}
 .google-btn svg{width:20px;height:20px}
-.demo-hint{margin-top:14px;font-size:.78rem;color:var(--cream-dim)}
+/* 게스트 체험 (v3 §5) */
+.guest-btn{width:100%;max-width:320px;margin-top:12px}
+.guest-hint{margin-top:8px;font-size:.78rem;color:var(--text-muted)}
+.guest-note{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);
+  border:1px solid var(--border);border-radius:14px;padding:13px 15px;margin-bottom:14px;
+  font-size:.84rem;color:var(--text-muted)}
+.guest-note span{flex:1;min-width:150px}
+.guest-note .btn{width:auto;flex:none;padding:9px 14px;font-size:.82rem}
+.demo-hint{margin-top:14px;font-size:.78rem;color:var(--text-muted)}
 .demo-pick{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
-.demo-pick button{background:var(--navy-3);border:1px solid var(--line);color:var(--cream);
+.demo-pick button{background:var(--surface-raised);border:1px solid var(--border);color:var(--text);
   border-radius:999px;padding:7px 13px;font-size:.8rem;cursor:pointer;font-family:inherit}
-.demo-pick button:hover{border-color:var(--gold)}
+.demo-pick button:hover{border-color:var(--accent)}
 .lang-toggle{position:absolute;top:20px;right:18px;display:inline-flex;align-items:center;gap:5px;
-  background:var(--navy-3);border:1px solid var(--line);border-radius:999px;padding:6px 12px;
-  font-size:.72rem;font-weight:700;color:var(--cream-dim);cursor:pointer;font-family:inherit;
+  background:var(--surface-raised);border:1px solid var(--border);border-radius:999px;padding:6px 12px;
+  font-size:.72rem;font-weight:700;color:var(--text-muted);cursor:pointer;font-family:inherit;
   letter-spacing:.5px;transition:.15s;z-index:1}
-.lang-toggle:hover{border-color:var(--gold);color:var(--gold)}
+.lang-toggle:hover{border-color:var(--accent);color:var(--accent-strong)}
 
 /* ---------- home ---------- */
 .hello{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .hello img{width:74px;flex:none}
-.hello h2{font-size:1.3rem}
-.hello .sub{color:var(--cream-dim);font-size:.85rem;margin-top:2px}
+.hello h2{font-size:1.3rem;color:var(--accent-strong)}
+.hello .sub{color:var(--text-muted);font-size:.85rem;margin-top:2px}
 
 .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
-.stat{background:var(--navy-3);border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;transition:transform .12s,border-color .2s}
-.stat:hover{transform:translateY(-2px);border-color:var(--gold)}
-.stat b{display:block;font-size:1.5rem;color:var(--gold);font-variant-numeric:tabular-nums}
-.stat span{font-size:.68rem;color:var(--cream-dim);text-transform:uppercase;letter-spacing:.5px}
+.stat{background:var(--surface-raised);border:1px solid var(--border);border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;transition:transform .12s,border-color .2s}
+.stat:hover{transform:translateY(-2px);border-color:var(--accent)}
+.stat b{display:block;font-size:1.5rem;color:var(--accent-strong);font-variant-numeric:tabular-nums}
+.stat span{font-size:.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
 
-.section-title{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);
+.section-title{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent-strong);
   margin:22px 2px 10px;font-weight:800}
 
-.menu-btn{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--navy-2);
-  border:1px solid var(--line);border-radius:16px;padding:16px;cursor:pointer;color:var(--cream);
+.menu-btn{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--surface);
+  border:1px solid var(--border);border-radius:16px;padding:16px;cursor:pointer;color:var(--text);
   font-family:inherit;transition:transform .12s,border-color .2s;margin-bottom:10px}
-.menu-btn:hover{transform:translateY(-2px);border-color:var(--gold)}
+.menu-btn:hover{transform:translateY(-2px);border-color:var(--accent)}
 .menu-btn .emoji{font-size:1.6rem;flex:none;width:30px;text-align:center}
 .menu-btn .mtext{flex:1}
 .menu-btn .mtext b{display:block;font-size:1.02rem;margin-bottom:2px}
-.menu-btn .mtext span{font-size:.8rem;color:var(--cream-dim)}
-.menu-btn .arrow{color:var(--cream-dim);font-size:1.2rem}
-.menu-btn .badge{background:var(--chili);color:#fff;border-radius:999px;font-size:.72rem;font-weight:800;
+.menu-btn .mtext span{font-size:.8rem;color:var(--text-muted)}
+.menu-btn .arrow{color:var(--text-muted);font-size:1.2rem}
+.menu-btn .badge{background:var(--accent);color:var(--accent-contrast);border-radius:999px;font-size:.72rem;font-weight:800;
   padding:2px 9px;flex:none}
 
 /* ---------- date list ---------- */
 .day-block{margin-bottom:14px}
-.day-head{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--gold);margin:16px 2px 8px;font-size:.95rem}
-.day-head .count{font-size:.72rem;color:var(--cream-dim);font-weight:600}
-.word-row{display:flex;align-items:center;gap:12px;background:var(--navy-2);border:1px solid var(--line);
+.day-head{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--accent-strong);margin:16px 2px 8px;font-size:.95rem}
+.day-head .count{font-size:.72rem;color:var(--text-muted);font-weight:600}
+.word-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);
   border-radius:12px;padding:12px 14px;margin-bottom:7px}
 .word-row .ko{font-weight:800;font-size:1.05rem;min-width:0;overflow-wrap:anywhere;word-break:break-word}
-.word-row .mean{color:var(--cream-dim);flex:1;min-width:0;font-size:.9rem;overflow-wrap:anywhere;word-break:break-word}
+.word-row .mean{color:var(--text-muted);flex:1;min-width:0;font-size:.9rem;overflow-wrap:anywhere;word-break:break-word}
 .word-row .tag{font-size:.62rem;padding:3px 8px;border-radius:999px;flex:none;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.tag.new{background:rgba(79,190,108,.15);color:var(--leaf-soft)}
-.tag.known{background:rgba(232,176,75,.15);color:var(--gold)}
-.tag.master{background:rgba(232,176,75,.9);color:var(--navy)}
-.tag.custom{background:rgba(138,127,255,.18);color:#8A7FFF}
-.word-del{background:none;border:none;color:var(--cream-dim);font-size:1rem;cursor:pointer;
+.tag.new{background:var(--success-soft);color:var(--success)}
+.tag.known{background:var(--accent-soft);color:var(--accent-strong)}
+.tag.master{background:var(--accent);color:var(--accent-contrast)}
+.tag.custom{background:var(--tag-custom-bg);color:var(--tag-custom-fg)}
+.word-del{background:none;border:none;color:var(--text-muted);font-size:1rem;cursor:pointer;
   flex:none;padding:4px 6px;border-radius:8px;transition:.15s;line-height:1}
-.word-del:hover{color:var(--chili-soft);background:rgba(229,55,43,.12)}
-.tag.sentence{background:rgba(242,104,94,.15);color:var(--chili-soft)}
+.word-del:hover{color:var(--danger);background:var(--danger-soft)}
+.tag.sentence{background:var(--danger-soft);color:var(--danger)}
 
 /* ---------- quiz ---------- */
 .quiz-top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
-.progress{flex:1;height:9px;background:var(--navy-3);border-radius:999px;overflow:hidden}
-.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-deep));width:0;transition:width .4s}
-.streak{display:flex;align-items:center;gap:4px;font-weight:800;color:var(--chili-soft);font-size:.95rem;min-width:44px;justify-content:flex-end}
-.streak.off{color:var(--cream-dim);opacity:.5}
-.q-count{font-size:.78rem;color:var(--cream-dim);text-align:center;margin-bottom:16px}
+.progress{flex:1;height:9px;background:var(--surface-sunken);border:1px solid var(--border);border-radius:999px;overflow:hidden}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-strong));width:0;transition:width .4s}
+.streak{display:flex;align-items:center;gap:4px;font-weight:800;color:var(--accent-strong);font-size:.95rem;min-width:44px;justify-content:flex-end}
+.streak.off{color:var(--text-muted);opacity:.5}
+.q-count{font-size:.78rem;color:var(--text-muted);text-align:center;margin-bottom:16px}
 
 .prompt{text-align:center;padding:12px 6px 6px}
-.prompt .plabel{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--cream-dim);margin-bottom:12px}
-.prompt .pword{font-size:2.3rem;font-weight:800;line-height:1.15}
+.prompt .plabel{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:12px}
+.prompt .pword{font-size:2.3rem;font-weight:800;line-height:1.15;color:var(--accent-strong)}
 .prompt .pword.sentence{font-size:1.5rem}
-.prompt .pron{color:var(--gold);font-size:1rem;margin-top:8px;font-weight:600}
+.prompt .pron{color:var(--accent-strong);font-size:1rem;margin-top:8px;font-weight:600}
 .pron-toggle{appearance:none;cursor:pointer;font-family:inherit;margin-top:10px;
   width:30px;height:30px;border-radius:999px;font-size:.8rem;font-weight:700;
-  background:var(--navy-3);border:1px solid var(--line);color:var(--cream-dim);
+  background:var(--surface-sunken);border:1px solid var(--border);color:var(--text-muted);
   display:inline-flex;align-items:center;justify-content:center;transition:.15s}
-.pron-toggle:hover{border-color:var(--gold);color:var(--gold)}
-.pron-toggle.active{background:var(--gold);border-color:var(--gold);color:var(--navy)}
+.pron-toggle:hover{border-color:var(--accent);color:var(--accent-strong)}
+.pron-toggle.active{background:var(--accent);border-color:var(--accent);color:var(--accent-contrast)}
 
 .options{display:flex;flex-direction:column;gap:10px;margin-top:22px}
-.opt{width:100%;text-align:left;background:var(--navy-3);border:2px solid transparent;border-radius:14px;
-  padding:16px 18px;font-size:1.05rem;font-weight:600;color:var(--cream);cursor:pointer;font-family:inherit;
+.opt{width:100%;text-align:left;background:var(--surface-sunken);border:2px solid var(--border);border-radius:14px;
+  padding:16px 18px;font-size:1.05rem;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit;
   transition:transform .1s,border-color .15s,background .15s;display:flex;align-items:center;gap:12px}
 
-/* 2지선다 (기차 게임) */
-.options.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
-.options.duo .opt{flex-direction:column;justify-content:center;text-align:center;gap:6px;
-  min-height:92px;padding:14px 12px;font-size:1rem;overflow-wrap:anywhere;word-break:break-word}
-.options.duo .opt .mark{width:auto;font-size:1.15rem;min-height:20px}
-.opt:hover:not(:disabled){transform:translateY(-2px);border-color:var(--gold)}
+.opt:hover:not(:disabled){transform:translateY(-2px);border-color:var(--accent)}
 .opt:disabled{cursor:default}
 .opt .mark{width:22px;flex:none;font-weight:900;font-size:1.2rem}
-.opt.correct{background:rgba(46,139,69,.22);border-color:var(--leaf-soft);color:#fff}
-.opt.correct .mark{color:var(--leaf-soft)}
-.opt.wrong{background:rgba(229,55,43,.18);border-color:var(--chili-soft);color:#fff}
-.opt.wrong .mark{color:var(--chili-soft)}
+.opt.correct{background:var(--success-soft);border-color:var(--success);color:var(--success)}
+.opt.correct .mark{color:var(--success)}
+.opt.wrong{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
+.opt.wrong .mark{color:var(--danger)}
 
 /* feedback illustration overlay */
 .feedback{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  z-index:40;pointer-events:none;opacity:0;transition:opacity .2s;background:rgba(10,13,25,.45);backdrop-filter:blur(2px)}
+  z-index:40;pointer-events:none;opacity:0;transition:opacity .2s;background:var(--scrim);backdrop-filter:blur(2px)}
 .feedback.show{opacity:1}
-.feedback img{width:230px;filter:drop-shadow(0 16px 30px rgba(0,0,0,.6));animation:pop .4s cubic-bezier(.2,1.3,.5,1)}
+.feedback img{width:230px;filter:var(--img-shadow);animation:pop .4s cubic-bezier(.2,1.3,.5,1)}
 @keyframes pop{0%{transform:scale(.5) rotate(-8deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
 .feedback .fmsg{margin-top:6px;font-size:1.5rem;font-weight:800}
-.feedback .fmoney{font-size:1.1rem;font-weight:800;margin-top:2px}
-.fmsg.good{color:var(--leaf-soft)}
-.fmsg.bad{color:var(--chili-soft)}
-
-/* =====================================================================
-   🚂 기차 러너 게임 (CSS 3D · 3레인)
-   ===================================================================== */
-.rg-stage{position:relative;width:100%;height:min(56vh,440px);min-height:290px;
-  margin:2px 0 0;border-radius:20px;overflow:hidden;border:1px solid var(--line);
-  perspective:900px;perspective-origin:50% 33%;
-  background:linear-gradient(180deg,#070A16 0%,#0D1226 30%,#141A33 62%,#1A2140 100%);
-  touch-action:none;-webkit-user-select:none;user-select:none;cursor:pointer;
-  box-shadow:var(--shadow)}
-.rg-world{position:absolute;inset:0;transform-style:preserve-3d}
-
-/* ---- 터널 바닥 ---- */
-.rg-floor{position:absolute;left:50%;bottom:0;width:1500px;height:3200px;
-  transform:translateX(-750px) rotateX(90deg);transform-origin:50% 100%;
-  background:linear-gradient(180deg,#3B2C1F 0%,#4A3728 45%,#54402E 100%)}
-.rg-ties{position:absolute;inset:0;
-  background-image:repeating-linear-gradient(0deg,
-    rgba(28,18,10,.55) 0 16px, rgba(0,0,0,0) 16px 74px);
-  animation:rgTies .5s linear infinite}
-@keyframes rgTies{from{background-position-y:0}to{background-position-y:74px}}
-.rg-rail{position:absolute;top:0;bottom:0;width:54px;margin-left:-27px;
-  background:linear-gradient(90deg,
-    transparent 0 8%, #9AA2C0 8% 19%, rgba(255,255,255,.35) 19% 22%, transparent 22% 78%,
-    #9AA2C0 78% 89%, rgba(255,255,255,.35) 89% 92%, transparent 92%)}
-.rg-ballast{position:absolute;top:0;bottom:0;width:150px;margin-left:-75px;
-  background:linear-gradient(90deg,transparent,rgba(0,0,0,.22) 30%,rgba(0,0,0,.22) 70%,transparent)}
-
-/* ---- 터널 벽 (속도감) ---- */
-.rg-wall{position:absolute;bottom:-40px;left:50%;width:3200px;height:520px;
-  transform-origin:0 100%;backface-visibility:visible;
-  background:
-    repeating-linear-gradient(90deg,
-      rgba(255,214,140,.0) 0 150px, rgba(255,214,140,.55) 150px 176px, rgba(255,214,140,0) 176px 300px),
-    linear-gradient(180deg,#3A4270 0%,#242B4C 55%,#171D36 100%);
-  animation:rgWall .62s linear infinite}
-.rg-wall.l{transform:translateX(-330px) rotateY(90deg)}
-.rg-wall.r{transform:translateX(330px) rotateY(90deg)}
-@keyframes rgWall{from{background-position-x:300px,0}to{background-position-x:0,0}}
-/* 벽에 세워둔 정차 열차 실루엣 */
-.rg-parked{position:absolute;bottom:-40px;left:50%;width:3200px;height:190px;
-  transform-origin:0 100%;
-  background:
-    repeating-linear-gradient(90deg,
-      #B23A2E 0 300px, #8E2C24 300px 316px, #C4463A 316px 600px, #8E2C24 600px 616px),
-    #A33328;
-  box-shadow:inset 0 30px 40px -20px rgba(255,255,255,.18);
-  animation:rgParked .62s linear infinite;opacity:.92}
-.rg-parked.l{transform:translateX(-300px) rotateY(90deg)}
-.rg-parked.r{transform:translateX(300px) rotateY(90deg)}
-@keyframes rgParked{from{background-position-x:616px,0}to{background-position-x:0,0}}
-/* 열차 창문 띠 */
-.rg-parked::after{content:"";position:absolute;left:0;right:0;top:34px;height:46px;
-  background:repeating-linear-gradient(90deg,
-    rgba(180,225,255,.75) 0 70px, transparent 70px 140px)}
-
-/* 소실점 안개 */
-.rg-fog{position:absolute;left:0;right:0;top:0;height:52%;pointer-events:none;z-index:5;
-  background:linear-gradient(180deg,#0A0E1E 0%,rgba(10,14,30,.85) 40%,rgba(12,17,36,0) 100%)}
-.rg-vanish{position:absolute;left:50%;top:33%;width:150px;height:90px;margin:-45px 0 0 -75px;
-  border-radius:50%;pointer-events:none;z-index:6;
-  background:radial-gradient(closest-side,rgba(232,176,75,.30),transparent 75%)}
-
-/* ---- 3D 오브젝트 레이어 ---- */
-.rg-track{position:absolute;left:50%;bottom:6px;width:0;height:0;transform-style:preserve-3d;z-index:7}
-.rg-obj{position:absolute;left:0;bottom:0;transform-style:preserve-3d;will-change:transform}
-.rg-obj>*{position:absolute;bottom:0;left:50%;transform:translateX(-50%)}
-
-/* 정답 간판 게이트 — 폭은 반드시 레인 간격보다 좁아야 겹치지 않는다 */
-.gate-in{width:112px;display:flex;flex-direction:column;align-items:center}
-.gate-panel{width:112px;min-height:78px;display:flex;align-items:center;justify-content:center;
-  padding:7px 6px;border-radius:9px;font-weight:800;font-size:1.15rem;line-height:1.12;
-  text-align:center;overflow-wrap:anywhere;hyphens:auto;color:#fff;
-  background:linear-gradient(180deg,#2F6DBE,#1B4A8C);border:3px solid #EAF1FF;
-  box-shadow:0 10px 30px -8px rgba(0,0,0,.75), inset 0 -10px 22px -12px rgba(0,0,0,.6)}
-.gate-panel.sm{font-size:.92rem}
-.gate-panel.xs{font-size:.74rem;line-height:1.08}
-.gate-legs{width:112px;height:62px;position:relative}
-.gate-legs::before,.gate-legs::after{content:"";position:absolute;top:0;bottom:0;width:8px;
-  background:linear-gradient(180deg,#C8D2E8,#7C87A6)}
-.gate-legs::before{left:12px} .gate-legs::after{right:12px}
-.gate-in.hit .gate-panel{background:linear-gradient(180deg,#3FBF63,#1F7C3C);border-color:#D9FFE4}
-.gate-in.miss .gate-panel{background:linear-gradient(180deg,#E5372B,#9E1E15);border-color:#FFD9D5}
-
-/* 가운데 차단벽 (안 고르면 충돌) */
-.barrier-in{width:104px;height:76px;border-radius:8px;
-  background:repeating-linear-gradient(45deg,#E5372B 0 16px,#F5EFE0 16px 32px);
-  border:3px solid #2A2A2A;box-shadow:0 10px 26px -8px rgba(0,0,0,.8)}
-
-/* 코인 */
-.coin-in{width:46px;height:46px;margin-bottom:26px}
-.coin-face{position:absolute;inset:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-weight:900;font-size:1.35rem;color:#7A5310;
-  background:radial-gradient(circle at 35% 30%,#FFE9A8,#E8B04B 55%,#B9821F);
-  border:3px solid #FFF0C4;box-shadow:0 0 16px rgba(232,176,75,.7);
-  animation:coinSpin 1.1s linear infinite}
-@keyframes coinSpin{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}
-
-/* ---- 플레이어 기차 ---- */
-.rg-player{position:absolute;left:50%;bottom:14px;width:88px;margin-left:-44px;z-index:9;
-  transition:transform .16s cubic-bezier(.3,1.4,.5,1)}
-.rg-player.lean-l .rg-train{transform:rotate(-7deg) skewX(4deg)}
-.rg-player.lean-r .rg-train{transform:rotate(7deg) skewX(-4deg)}
-.rg-train{position:relative;width:88px;transition:transform .18s}
-.t-roof{height:12px;margin:0 7px;border-radius:10px 10px 4px 4px;
-  background:linear-gradient(180deg,#F2685E,#C8352A)}
-.t-body{position:relative;height:60px;border-radius:9px 9px 12px 12px;
-  background:linear-gradient(180deg,#E5372B 0%,#B62A20 62%,#7E1C15 100%);
-  border:3px solid #2A1410;display:flex;align-items:flex-start;justify-content:center;gap:7px;padding-top:9px;
-  box-shadow:inset 0 -16px 24px -14px rgba(0,0,0,.9)}
-.t-win{width:25px;height:22px;border-radius:5px;
-  background:linear-gradient(180deg,#CFEBFF,#6FA8D6);border:2px solid #23303F}
-.t-light{position:absolute;bottom:7px;width:12px;height:12px;border-radius:50%;
-  background:radial-gradient(circle,#FFF6D0,#E8B04B);box-shadow:0 0 13px 4px rgba(232,176,75,.75)}
-.t-light.l{left:10px} .t-light.r{right:10px}
-.t-wheels{height:11px;margin:0 5px;border-radius:0 0 7px 7px;background:#1A1A22;
-  box-shadow:inset 0 3px 0 rgba(255,255,255,.12)}
-.rg-shadow{position:absolute;left:50%;bottom:-9px;width:94px;height:16px;margin-left:-47px;
-  border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.65),transparent);z-index:-1}
-/* 부스트 불꽃 */
-.rg-flame{position:absolute;left:50%;bottom:-8px;margin-left:-20px;width:40px;text-align:center;
-  font-size:1.5rem;opacity:0;transition:.25s}
-.rg-player.boost .rg-flame{opacity:1;animation:flameFlick .28s ease-in-out infinite alternate}
-@keyframes flameFlick{from{transform:scale(.85) translateY(2px)}to{transform:scale(1.2) translateY(-3px)}}
-.rg-player.crash .rg-train{animation:rgCrash .6s cubic-bezier(.3,1.2,.5,1) forwards}
-@keyframes rgCrash{
-  0%{transform:scale(1) rotate(0)}
-  30%{transform:scale(1.25) rotate(-16deg)}
-  100%{transform:scale(.55) rotate(26deg) translateY(24px);opacity:0}}
-
-/* ---- 속도선 ---- */
-.rg-speed{position:absolute;inset:0;pointer-events:none;z-index:8;opacity:0;transition:opacity .3s;
-  background:
-    repeating-linear-gradient(90deg,transparent 0 34px,rgba(255,255,255,.14) 34px 36px,transparent 36px 70px)}
-.rg-stage.boosting .rg-speed{opacity:.55;animation:rgSpeed .3s linear infinite}
-@keyframes rgSpeed{from{transform:scaleY(1)}to{transform:scaleY(1.06)}}
-
-/* ---- HUD ---- */
-.rg-hud{position:absolute;inset:0;pointer-events:none;z-index:20}
-.rg-prompt{position:absolute;left:10px;right:10px;top:10px;text-align:center;
-  background:linear-gradient(180deg,rgba(10,14,30,.9),rgba(10,14,30,.62));
-  border:1px solid rgba(245,239,224,.16);border-radius:14px;padding:9px 12px;
-  backdrop-filter:blur(3px)}
-.rg-plabel{font-size:.6rem;text-transform:uppercase;letter-spacing:1.6px;color:var(--gold);font-weight:800}
-.rg-pword{font-size:1.75rem;font-weight:900;line-height:1.15;margin-top:2px;overflow-wrap:anywhere}
-.rg-pword.long{font-size:1.3rem}
-.rg-ppron{font-size:.82rem;color:var(--gold);font-weight:700;margin-top:1px}
-.rg-coins{position:absolute;left:12px;top:100px;font-weight:900;font-size:1rem;color:var(--gold);
-  display:flex;align-items:center;gap:6px;text-shadow:0 2px 6px rgba(0,0,0,.9)}
-/* 🪙 이모지는 기기에 따라 네모로 깨져서 CSS로 직접 그린 코인을 쓴다 */
-.mini-coin{width:17px;height:17px;border-radius:50%;flex:none;display:inline-flex;
-  align-items:center;justify-content:center;font-size:.62rem;color:#7A5310;
-  background:radial-gradient(circle at 35% 30%,#FFE9A8,#E8B04B 60%,#B9821F);
-  border:2px solid #FFF0C4;box-shadow:0 0 8px rgba(232,176,75,.6)}
-.rg-mult{position:absolute;right:12px;top:100px;font-weight:900;font-size:1rem;color:var(--chili-soft);
-  text-shadow:0 2px 6px rgba(0,0,0,.9);opacity:0;transition:.25s}
-.rg-mult.on{opacity:1;animation:multPulse .6s ease-in-out infinite alternate}
-@keyframes multPulse{from{transform:scale(1)}to{transform:scale(1.15)}}
-.rg-hint{position:absolute;left:8px;right:8px;bottom:6px;text-align:center;font-size:.78rem;font-weight:700;
-  color:var(--cream);text-shadow:0 2px 8px rgba(0,0,0,.95);transition:opacity .4s}
-.rg-hint.gone{opacity:0}
-.rg-arrows{position:absolute;inset:0;display:flex;z-index:15}
-.rg-arrows i{flex:1;display:flex;align-items:center;justify-content:center;font-style:normal;
-  font-size:2rem;color:rgba(245,239,224,.16)}
-
-/* 정답/오답 화면 플래시 */
-.rg-flash{position:absolute;inset:0;pointer-events:none;z-index:25;opacity:0}
-.rg-flash.good{background:radial-gradient(circle,rgba(79,190,108,.5),transparent 70%);animation:rgFlash .5s ease-out}
-.rg-flash.bad{background:radial-gradient(circle,rgba(229,55,43,.6),transparent 72%);animation:rgFlash .55s ease-out}
-@keyframes rgFlash{0%{opacity:.95}100%{opacity:0}}
-.rg-boom{position:absolute;left:50%;bottom:40px;margin-left:-60px;width:120px;text-align:center;
-  font-size:4rem;opacity:0;z-index:26;pointer-events:none}
-.rg-boom.go{animation:rgBoom .8s cubic-bezier(.2,1.4,.4,1) forwards}
-@keyframes rgBoom{0%{opacity:0;transform:scale(.3)}30%{opacity:1;transform:scale(1.35)}100%{opacity:0;transform:scale(1.9)}}
-
-/* 획득/차감 금액 플로팅 */
-.won-pop{position:absolute;left:50%;top:104px;transform:translateX(-50%);z-index:27;
-  font-weight:900;font-size:1.5rem;opacity:0;pointer-events:none;text-shadow:0 3px 10px rgba(0,0,0,.9)}
-.won-pop.go{animation:wonFloat 1.1s ease-out forwards}
-@keyframes wonFloat{
-  0%{opacity:0;transform:translate(-50%,14px) scale(.7)}
-  25%{opacity:1;transform:translate(-50%,0) scale(1.15)}
-  70%{opacity:1;transform:translate(-50%,-10px) scale(1)}
-  100%{opacity:0;transform:translate(-50%,-34px) scale(.95)}}
-.won-pop.good{color:var(--leaf-soft)}
-.won-pop.bad{color:var(--chili-soft)}
-.won-pop.coin{color:var(--gold);font-size:1.15rem;top:150px}
-
-/* 화면 진동 */
-.shake{animation:shakeX .5s cubic-bezier(.36,.07,.19,.97)}
-@keyframes shakeX{
-  0%,100%{transform:translateX(0)}
-  12%{transform:translateX(-10px)}26%{transform:translateX(9px)}
-  40%{transform:translateX(-7px)}56%{transform:translateX(6px)}
-  72%{transform:translateX(-4px)}88%{transform:translateX(2px)}}
-
-/* 하트 라이프 */
-.lives{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;font-size:1.55rem}
-.lives .heart{line-height:1;filter:drop-shadow(0 4px 7px rgba(229,55,43,.45));transition:.3s}
-.lives .heart.lost{filter:grayscale(1) brightness(.6);opacity:.28;transform:scale(.78)}
-.lives .heart.losing{animation:heartBreak .65s cubic-bezier(.3,1.2,.5,1) forwards}
-@keyframes heartBreak{
-  0%{transform:scale(1)}
-  30%{transform:scale(1.45) rotate(-10deg)}
-  60%{transform:scale(.9) rotate(8deg)}
-  100%{transform:scale(.78);filter:grayscale(1) brightness(.6);opacity:.28}}
+.feedback .fmoney{font-size:1.1rem;font-weight:800;margin-top:2px;color:var(--accent-strong)}
+.fmsg.good{color:var(--success)}
+.fmsg.bad{color:var(--danger)}
 
 /* =====================================================================
    🧠 단어 복습 (플래시카드)
@@ -404,79 +249,72 @@ body{
 .flash.flipped{transform:rotateY(180deg)}
 .flash .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-  border-radius:20px;padding:26px 20px;text-align:center;border:1px solid var(--line);
+  border-radius:20px;padding:26px 20px;text-align:center;border:1px solid var(--border);
   box-shadow:var(--shadow)}
-.flash .front{background:linear-gradient(180deg,var(--navy-2),#191F38)}
+.flash .front{background:linear-gradient(180deg,var(--surface),var(--surface-raised))}
 .flash .back{transform:rotateY(180deg);
-  background:linear-gradient(180deg,#243056,#1B2240);border-color:rgba(232,176,75,.35)}
+  background:linear-gradient(180deg,var(--surface-raised),var(--bg));border-color:var(--accent-veil)}
 .flash .ftext{font-size:2rem;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
 .flash .ftext.long{font-size:1.4rem}
-.flash .fside{font-size:.66rem;text-transform:uppercase;letter-spacing:1.6px;color:var(--cream-dim)}
-.flash .back .fside{color:var(--gold)}
-.flash .fpron{color:var(--gold);font-size:.98rem;font-weight:600}
-.flash .fhint{position:absolute;bottom:14px;left:0;right:0;font-size:.72rem;color:var(--cream-dim);opacity:.8}
+.flash .fside{font-size:.66rem;text-transform:uppercase;letter-spacing:1.6px;color:var(--text-muted)}
+.flash .back .fside{color:var(--accent-strong)}
+.flash .fpron{color:var(--accent-strong);font-size:.98rem;font-weight:600}
+.flash .fhint{position:absolute;bottom:14px;left:0;right:0;font-size:.72rem;color:var(--text-muted);opacity:.8}
 .flash .fstatus{position:absolute;top:14px;right:14px;font-size:.62rem;padding:3px 9px;border-radius:999px;
   font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 
 .flash-nav{display:flex;align-items:center;gap:10px;margin-top:16px}
 .flash-nav .btn{flex:1;width:auto}
 .flash-nav .navbtn{flex:none;width:52px;padding:14px 0;font-size:1.1rem}
-.flash-count{text-align:center;font-size:.78rem;color:var(--cream-dim);margin-top:12px;
+.flash-count{text-align:center;font-size:.78rem;color:var(--text-muted);margin-top:12px;
   font-variant-numeric:tabular-nums}
 .flash-dots{display:flex;justify-content:center;flex-wrap:wrap;gap:5px;margin-top:10px}
-.flash-dots i{width:6px;height:6px;border-radius:999px;background:var(--navy-3);transition:.2s}
-.flash-dots i.seen{background:rgba(232,176,75,.45)}
-.flash-dots i.now{background:var(--gold);transform:scale(1.6)}
+.flash-dots i{width:6px;height:6px;border-radius:999px;background:var(--border);transition:.2s}
+.flash-dots i.seen{background:var(--accent-veil)}
+.flash-dots i.now{background:var(--accent);transform:scale(1.6)}
 
 @media (prefers-reduced-motion: reduce){ .flash{transition:none} }
 
-/* 게임오버 배너 */
-.gameover-note{text-align:center;margin-top:18px;padding:16px;border-radius:14px;
-  background:rgba(229,55,43,.12);border:1px solid rgba(242,104,94,.45)}
-.gameover-note b{display:block;color:var(--chili-soft);font-size:1.15rem;margin-bottom:4px}
-.gameover-note span{color:var(--cream-dim);font-size:.85rem}
-
-/* 접근성: 모션 최소화 설정 존중 */
-@media (prefers-reduced-motion: reduce){
-  .train.idle,.train-scene .cloud,.goal{animation:none}
-  .shake{animation:none}
-}
-
-.answer-note{text-align:center;margin-top:18px;padding:14px;background:var(--navy-3);border-radius:14px;border:1px solid var(--line)}
-.answer-note .cor{color:var(--leaf-soft);font-weight:800}
-.answer-note .ex{color:var(--cream-dim);font-size:.85rem;margin-top:6px;font-style:italic}
+/* 정답 카드 (v3 §3.5) — 정답이든 오답이든 문항 뒤에 항상 뜬다 */
+.answer-card{text-align:center;margin-top:18px;padding:16px 14px;background:var(--surface);border-radius:14px;border:1px solid var(--border)}
+.answer-card .ac-ko{font-size:1.5rem;font-weight:800;line-height:1.25;overflow-wrap:anywhere;color:var(--accent-strong)}
+.answer-card .ac-meta{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:6px;flex-wrap:wrap}
+.answer-card .ac-pron{color:var(--accent-strong);font-size:.9rem;font-weight:600}
+.answer-card .ac-pos{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent-strong)}
+.answer-card .ac-mean{margin-top:8px;font-size:1rem;color:var(--text);overflow-wrap:anywhere}
+.answer-card .ac-ex{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.answer-card .ac-ex-ko{font-size:.95rem;font-weight:600;overflow-wrap:anywhere}
+.answer-card .ac-ex-mean{color:var(--text-muted);font-size:.85rem;margin-top:4px;font-style:italic;overflow-wrap:anywhere}
 
 .field{margin-bottom:14px;text-align:left}
-.field label{display:block;font-size:.75rem;color:var(--cream-dim);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.field input{width:100%;background:var(--navy-3);border:1px solid var(--line);border-radius:12px;
-  padding:13px 14px;font-size:1rem;color:var(--cream);font-family:inherit}
-.field input:focus{outline:none;border-color:var(--gold)}
-.field-error{color:var(--chili-soft);font-size:.8rem;margin:6px 0 12px}
+.field label{display:block;font-size:.75rem;color:var(--text-muted);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:13px 14px;font-size:1rem;color:var(--text);font-family:inherit}
+.field textarea{resize:vertical;line-height:1.6;min-height:120px}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--focus-ring);box-shadow:0 0 0 3px var(--accent-soft)}
+.field-error{color:var(--danger);font-size:.8rem;margin:6px 0 12px}
 .field-error.hidden{display:none}
 
 /* ---------- result ---------- */
 .result{text-align:center;padding:10px 0}
-.result img{width:210px;filter:drop-shadow(0 14px 28px rgba(0,0,0,.5));animation:pop .5s cubic-bezier(.2,1.3,.5,1)}
-.result h2{font-size:1.8rem;margin:10px 0 4px}
-.result .score{color:var(--cream-dim);margin-bottom:18px}
-.result .earned{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,var(--gold),var(--gold-deep));
-  color:var(--navy);font-weight:800;font-size:1.3rem;border-radius:14px;padding:12px 22px;margin-bottom:20px}
+.result img{width:210px;filter:var(--img-shadow);animation:pop .5s cubic-bezier(.2,1.3,.5,1)}
+.result h2{font-size:1.8rem;margin:10px 0 4px;color:var(--accent-strong)}
+.result .score{color:var(--text-muted);margin-bottom:18px}
+.result .earned{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,var(--accent),var(--accent-strong));
+  color:var(--accent-contrast);font-weight:800;font-size:1.3rem;border-radius:14px;padding:12px 22px;margin-bottom:20px}
 
 /* bottom nav */
-.botnav{position:fixed;left:0;right:0;bottom:0;background:rgba(21,26,46,.92);backdrop-filter:blur(10px);
-  border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 0 10px;z-index:20}
-.botnav button{background:none;border:none;color:var(--cream-dim);font-family:inherit;font-size:.66rem;
+.botnav{position:fixed;left:0;right:0;bottom:0;background:var(--nav-bg);backdrop-filter:blur(10px);
+  border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:8px 0 10px;z-index:20}
+.botnav button{background:none;border:none;color:var(--text-muted);font-family:inherit;font-size:.66rem;
   display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 4px;flex:1;min-width:0}
 .botnav button .bi{font-size:1.25rem}
-.botnav button.active{color:var(--gold)}
+.botnav button.active{color:var(--accent-strong)}
 
 @media(max-width:400px){
   .prompt .pword{font-size:1.9rem}
   .login img{width:150px}
-  .rg-pword{font-size:1.5rem}
-  .rg-pword.long{font-size:1.15rem}
-  .options.duo .opt{min-height:82px;font-size:.94rem;padding:12px 9px}
-  .lives{font-size:1.35rem;gap:10px}
 }
 
 /* 좁은 화면(모바일)에서는 단어 줄을 세로로 쌓아 긴 텍스트가 한 글자씩 떨어지지 않게 함 */
@@ -499,7 +337,7 @@ body{
 <div class="feedback" id="feedback"></div>
 
 <script type="module" src="firebase-init.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="vendor/html2canvas.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
