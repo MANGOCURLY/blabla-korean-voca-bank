@@ -1031,6 +1031,40 @@ function renderLogin(){
   }
 }
 
+/* ---------- 로그인 직후 화면 (단어 CSV 로딩 / 준비 안 됨) ----------
+   handleLoginSuccess 가 부르는데 정의가 없어서, 로그인한 계정은 여기서 바로 죽고
+   화면이 빈 채로 남았다. student 가 아직 없는 구간이라 전역 L 대신
+   invite 의 언어팩(T[lang])을 직접 쓴다. */
+function renderVocabLoading(lang){
+  botnav.classList.add('hidden');
+  const Lx = T[lang] || T.fr;
+  app.innerHTML = `
+    <div class="result">
+      <img src="${IMG.study}" alt="">
+      <div class="score">${Lx.vocabLoading}</div>
+    </div>`;
+}
+
+function renderVocabNotReady(lang){
+  botnav.classList.add('hidden');
+  const Lx = T[lang] || T.fr;
+  app.innerHTML = `
+    <div class="result">
+      <img src="${IMG.surprised}" alt="">
+      <div class="score" style="max-width:380px;margin:0 auto 18px">${Lx.vocabNotReady}</div>
+      <div class="btn-row" style="flex-direction:column">
+        <button class="btn chili" id="vocabLogoutBtn">🚪 ${Lx.logout}</button>
+      </div>
+    </div>`;
+  // doLogout() 은 student 와 L 에 의존한다 — 여기선 둘 다 아직 없으므로 직접 로그아웃한다
+  $('#vocabLogoutBtn').onclick = async ()=>{
+    currentUserEmail = null; currentUid = null; currentPackId = null;
+    pending = new Map();
+    try{ await window.fb.signOut(window.fb.auth); }   // onAuthStateChanged → renderLogin()
+    catch(e){ console.error(e); renderLogin(); }
+  };
+}
+
 /* ---------- 오늘 복습 예정 개수 (SRS 데모) ---------- */
 function dueCount(){
   // 데모: 아직 안 본 것 + status가 new/learning인 것을 "복습 대상"으로
