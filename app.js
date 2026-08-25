@@ -910,7 +910,11 @@ async function doLogout(){
 /* ---------- 앱 시작 (Firebase 준비된 뒤) ---------- */
 function initApp(){
   window.fb.onAuthStateChanged(window.fb.auth, user=>{
-    if(user && user.email) handleLoginSuccess(user);
+    if(user && user.email) handleLoginSuccess(user).catch(e=>{
+      // 예전에는 여기서 예외가 조용히 사라져 흰 화면이 됐다
+      console.error('로그인 처리 실패:', e);
+      renderBootError(String((e && e.message) || e));
+    });
     else { currentUserEmail = null; currentUid = null; currentPackId = null; pending = new Map();
            isGuest = false; guestReset(); renderLogin(); }
   });
@@ -1029,6 +1033,27 @@ function renderLogin(){
       b.onclick = ()=>startGuest();
     });
   }
+}
+
+/* ---------- 부팅 실패 화면 ----------
+   firebase-init.js 가 죽거나 로그인 처리가 예외로 끝나면 예전에는 흰 화면만 남았다.
+   무엇이 잘못됐는지 화면에 띄운다. student·L 에 의존하지 않는다. */
+function renderBootError(detail){
+  botnav.classList.add('hidden');
+  app.innerHTML = `
+    <div class="result">
+      <img src="${IMG.grumpy}" alt="">
+      <div class="score" style="max-width:420px;margin:0 auto 10px">
+        L'application n'a pas pu démarrer.<br>The app failed to start.
+      </div>
+      <div class="score" id="bootErrDetail"
+           style="max-width:420px;margin:0 auto 18px;font-size:.78rem;font-family:monospace"></div>
+      <div class="btn-row" style="flex-direction:column">
+        <button class="btn" id="bootReload">↻ Recharger / Reload</button>
+      </div>
+    </div>`;
+  $('#bootErrDetail').textContent = detail || '';   // 예외 메시지는 HTML 로 넣지 않는다
+  $('#bootReload').onclick = ()=>location.reload();
 }
 
 /* ---------- 로그인 직후 화면 (단어 CSV 로딩 / 준비 안 됨) ----------
@@ -2045,4 +2070,9 @@ botnav.querySelectorAll('button').forEach(b=>{
 
 /* ---------- 시작 ---------- */
 if(window.fb) initApp();
-else window.addEventListener('fb-ready', initApp);
+else {
+  window.addEventListener('fb-ready', initApp);
+  window.addEventListener('fb-failed', e=>renderBootError(e.detail));
+  // firebase-init.js 가 아예 로드조차 못 되면 두 이벤트 다 오지 않는다
+  setTimeout(()=>{ if(!window.fb) renderBootError('firebase-init.js — 응답 없음'); }, 8000);
+}
