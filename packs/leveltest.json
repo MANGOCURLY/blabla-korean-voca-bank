@@ -1,0 +1,216 @@
+{
+  "version": 1,
+  "itemCount": 21,
+  "items": [
+    {
+      "id": "W1684",
+      "ko": "마음",
+      "pos": "명사",
+      "lvl": "A",
+      "rank": 148,
+      "band": 1,
+      "en": { "answer": "heart", "wrong": ["body", "face", "friend"] },
+      "fr": { "answer": "cœur", "wrong": ["jour", "père", "école"] }
+    },
+    {
+      "id": "W3771",
+      "ko": "오르다",
+      "pos": "동사",
+      "lvl": "A",
+      "rank": 394,
+      "band": 2,
+      "en": { "answer": "to rise", "wrong": ["to play", "to wear", "to open"] },
+      "fr": { "answer": "monter", "wrong": ["poser", "boire", "rire"] }
+    },
+    {
+      "id": "W0249",
+      "ko": "걸다",
+      "pos": "동사",
+      "lvl": "A",
+      "rank": 716,
+      "band": 3,
+      "en": { "answer": "to hang", "wrong": ["to lose", "to sell", "to work"] },
+      "fr": { "answer": "accrocher", "wrong": ["enseigner", "discuter", "expliquer"] }
+    },
+    {
+      "id": "W0042",
+      "ko": "가볍다",
+      "pos": "형용사",
+      "lvl": "A",
+      "rank": 1189,
+      "band": 4,
+      "en": { "answer": "to be light", "wrong": ["to be clear", "to be short", "to be clean"] },
+      "fr": { "answer": "être léger", "wrong": ["être chaud", "être joli", "être sain"] }
+    },
+    {
+      "id": "W3659",
+      "ko": "연습",
+      "pos": "명사",
+      "lvl": "A",
+      "rank": 1896,
+      "band": 5,
+      "en": { "answer": "practice", "wrong": ["restroom", "magazine", "birthday"] },
+      "fr": { "answer": "entraînement", "wrong": ["anniversaire", "l'an prochain", "grand magasin"] }
+    },
+    {
+      "id": "W1037",
+      "ko": "냉장고",
+      "pos": "명사",
+      "lvl": "A",
+      "rank": 3311,
+      "band": 6,
+      "en": { "answer": "refrigerator", "wrong": ["police station", "dining table", "grilled meat"] },
+      "fr": { "answer": "réfrigérateur", "wrong": ["robe coréenne", "appareil photo", "portefeuille"] }
+    },
+    {
+      "id": "W0732",
+      "ko": "금요일",
+      "pos": "명사",
+      "lvl": "A",
+      "rank": 7714,
+      "band": 7,
+      "en": { "answer": "Friday", "wrong": ["Monday", "Tuesday", "Thursday"] },
+      "fr": { "answer": "vendredi", "wrong": ["mercredi", "dimanche", "samedi"] }
+    },
+    {
+      "id": "W4889",
+      "ko": "지난해",
+      "pos": "명사",
+      "lvl": "B",
+      "rank": 523,
+      "band": 1,
+      "en": { "answer": "last year", "wrong": ["same time", "present day", "whole country"] },
+      "fr": { "answer": "année passée", "wrong": ["toutes sortes", "soi individuel", "temps récent"] }
+    },
+    {
+      "id": "W2396",
+      "ko": "부족하다",
+      "pos": "형용사",
+      "lvl": "B",
+      "rank": 1243,
+      "band": 2,
+      "en": { "answer": "to be insufficient", "wrong": ["to be comfortable", "to be blue-green", "to be excessive"] },
+      "fr": { "answer": "être insuffisant", "wrong": ["être confortable", "être effrayant", "être nombreux"] }
+    },
+    {
+      "id": "W3637",
+      "ko": "연구소",
+      "pos": "명사",
+      "lvl": "B",
+      "rank": 1950,
+      "band": 3,
+      "en": { "answer": "research institute", "wrong": ["broadcast station", "school admission", "air temperature"] },
+      "fr": { "answer": "institut de recherche", "wrong": ["président d'université", "ensemble résidentiel", "chef de département"] }
+    },
+    {
+      "id": "W1600",
+      "ko": "떨리다",
+      "pos": "동사",
+      "lvl": "B",
+      "rank": 2570,
+      "band": 4,
+      "en": { "answer": "to tremble", "wrong": ["to proceed", "to stretch", "to touch"] },
+      "fr": { "answer": "trembler", "wrong": ["procéder", "accourir", "s'abîmer"] }
+    },
+    {
+      "id": "W0844",
+      "ko": "까맣다",
+      "pos": "형용사",
+      "lvl": "B",
+      "rank": 3264,
+      "band": 5,
+      "en": { "answer": "to be black", "wrong": ["to be dirty", "to be lonely", "to be yellow"] },
+      "fr": { "answer": "être noir", "wrong": ["être sale", "être mince", "être plein"] }
+    },
+    {
+      "id": "W2349",
+      "ko": "봉지",
+      "pos": "명사",
+      "lvl": "B",
+      "rank": 5496,
+      "band": 6,
+      "en": { "answer": "pouch", "wrong": ["style", "corn", "shrimp"] },
+      "fr": { "answer": "sachet", "wrong": ["chaîne", "piqûre", "allure"] }
+    },
+    {
+      "id": "W5596",
+      "ko": "피로하다",
+      "pos": "형용사",
+      "lvl": "B",
+      "rank": 8981,
+      "band": 7,
+      "en": { "answer": "to be tired", "wrong": ["to be bland", "to be bitter", "to be tender"] },
+      "fr": { "answer": "être fatigué", "wrong": ["être inutile", "être nuageux", "être morose"] }
+    },
+    {
+      "id": "W4253",
+      "ko": "일정하다",
+      "pos": "형용사",
+      "lvl": "C",
+      "rank": 1360,
+      "band": 1,
+      "en": { "answer": "to be constant", "wrong": ["to be powerful", "to be thorough", "to be precious"] },
+      "fr": { "answer": "être constant", "wrong": ["être unique", "être colossal", "être abondant"] }
+    },
+    {
+      "id": "W2481",
+      "ko": "비난",
+      "pos": "명사",
+      "lvl": "C",
+      "rank": 2684,
+      "band": 2,
+      "en": { "answer": "censure", "wrong": ["backing", "warning", "quality"] },
+      "fr": { "answer": "blâme", "wrong": ["appui", "menace", "trace"] }
+    },
+    {
+      "id": "W0706",
+      "ko": "근로",
+      "pos": "명사",
+      "lvl": "C",
+      "rank": 3628,
+      "band": 3,
+      "en": { "answer": "labor", "wrong": ["fruit", "gesture", "pupil"] },
+      "fr": { "answer": "labeur", "wrong": ["geste", "cuisine", "littoral"] }
+    },
+    {
+      "id": "W4383",
+      "ko": "잘리다",
+      "pos": "동사",
+      "lvl": "C",
+      "rank": 4457,
+      "band": 4,
+      "en": { "answer": "to be cut off", "wrong": ["to be reported", "to be improved", "to be recorded"] },
+      "fr": { "answer": "être coupé", "wrong": ["être saisi", "être exclu", "être prévu"] }
+    },
+    {
+      "id": "W5864",
+      "ko": "확신하다",
+      "pos": "동사",
+      "lvl": "C",
+      "rank": 5439,
+      "band": 5,
+      "en": { "answer": "to feel certain", "wrong": ["to get agitated", "to make a living", "to be confined to"] },
+      "fr": { "answer": "être persuadé", "wrong": ["être maintenu", "être développé", "être modifié"] }
+    },
+    {
+      "id": "W1286",
+      "ko": "대강",
+      "pos": "부사",
+      "lvl": "C",
+      "rank": 6770,
+      "band": 6,
+      "en": { "answer": "roughly", "wrong": ["utterly", "monthly", "briskly"] },
+      "fr": { "answer": "approximativement", "wrong": ["hebdomadairement", "provisoirement", "seulement maintenant"] }
+    },
+    {
+      "id": "W5180",
+      "ko": "촌스럽다",
+      "pos": "형용사",
+      "lvl": "C",
+      "rank": 9813,
+      "band": 7,
+      "en": { "answer": "to be rustic", "wrong": ["to be steady", "to be unhurt", "to be sultry"] },
+      "fr": { "answer": "être rustique", "wrong": ["être inhabile", "être douillet", "être énervant"] }
+    }
+  ]
+}

@@ -14,8 +14,7 @@ const firebaseConfig = {
   projectId: "vocabank-db55a",
   storageBucket: "vocabank-db55a.firebasestorage.app",
   messagingSenderId: "761192490518",
-  appId: "1:761192490518:web:1e5e242482646be8ce3737",
-  measurementId: "G-93K3SB0XP3"
+  appId: "1:761192490518:web:1e5e242482646be8ce3737"
 };
 
 /* 이 파일은 모듈이다. 최상단에서 예외가 나면 window.fb 가 영영 안 생기고,

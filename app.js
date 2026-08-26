@@ -140,6 +140,24 @@ const T = {
     wallBody: (n)=>`Tu as appris ${n} mot${n>1?'s':''} — connecte-toi pour les garder et continuer.`,
     wallMore: "Explorer encore un peu",
     wallBackToLogin: "Revenir à l'écran de connexion",
+    continueStudy: "Continuer",
+    unitSection: "Unités",
+    unitNamed: (n)=>`Unité ${n}`,
+    unitCustom: "Mes mots",
+    unitUnsorted: "Autres",
+    levelSection: "Niveau",
+    levelA: "Débutant",
+    levelB: "Intermédiaire",
+    levelC: "Avancé",
+    packLoadError: "Impossible de charger le paquet de mots. Vérifie ta connexion et rafraîchis la page.",
+    ltSkip: "Passer",
+    ltRetake: "Repasser le test de niveau",
+    ltRetakeSub: "21 questions · environ 2 min",
+    ltYourStart: "Votre point de départ",
+    ltUnitLine: (n, letter, name)=>`Unité ${n} · ${letter} ${name}`,
+    ltOfCorrect: (c, t)=>`${c} bonnes réponses sur ${t}`,
+    ltStartHere: "Commencer ici",
+    ltStartOver: "Recommencer depuis le début",
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
@@ -255,6 +273,24 @@ const T = {
     wallBody: (n)=>`You've learned ${n} word${n===1?'':'s'} so far — log in to save them and keep going.`,
     wallMore: "Look around a bit more",
     wallBackToLogin: "Back to the login screen",
+    continueStudy: "Continue",
+    unitSection: "Units",
+    unitNamed: (n)=>`Unit ${n}`,
+    unitCustom: "My words",
+    unitUnsorted: "Other",
+    levelSection: "Level",
+    levelA: "Beginner",
+    levelB: "Intermediate",
+    levelC: "Advanced",
+    packLoadError: "Couldn't load the word pack. Check your connection and refresh the page.",
+    ltSkip: "Skip",
+    ltRetake: "Retake the level test",
+    ltRetakeSub: "21 questions · about 2 min",
+    ltYourStart: "Your starting point",
+    ltUnitLine: (n, letter, name)=>`Unit ${n} · ${letter} ${name}`,
+    ltOfCorrect: (c, t)=>`${c} of ${t} correct`,
+    ltStartHere: "Start here",
+    ltStartOver: "Start from the beginning",
   }
 };
 
@@ -262,8 +298,8 @@ const T = {
    실제로는 구글시트에서 불러옴. type: word | sentence
    상태(state)는 로컬에서만 관리(데모).                              */
 const SAMPLE = {
-  jessica: {
-    name:"Jessica", lang:"fr",
+  fr: {
+    lang:"fr",
     words:[
       {date:"2026-06-30", ko:"주말 내내", pron:"jumal naenae", mean:"tout le week-end", type:"word"},
       {date:"2026-06-30", ko:"원래", pron:"wonrae", mean:"normalement / à l'origine", type:"word"},
@@ -289,8 +325,8 @@ const SAMPLE = {
       {date:"2026-06-20", ko:"계절", pron:"gyejeol", mean:"la saison", type:"word"},
     ]
   },
-  corine: {
-    name:"Corine", lang:"en",
+  en: {
+    lang:"en",
     words:[
       {date:"2026-06-30", ko:"주말 내내", pron:"jumal naenae", mean:"all weekend long", type:"word"},
       {date:"2026-06-30", ko:"원래", pron:"wonrae", mean:"originally / usually", type:"word"},
@@ -337,14 +373,25 @@ let bank = 0;
 let bestStreak = 0;
 let currentUserEmail = null; // Firebase 로그인 이메일 (데모 모드면 null)
 let currentUid = null;       // Firestore 문서 키. 이메일 평문을 키로 쓰지 않는다
-let currentPackId = null;    // invites 문서의 packId (cards 문서에 기록용)
+let currentPackId = null;    // invites 문서의 packId
+let currentPackLevel = null; // 오픈/게스트의 A/B/C. 시트 학생은 null
+let currentUnitId = null;    // 지금 학습 중인 유닛
+let studentProg = { cur: null, u: {}, lvl: null };  // students.prog (홈은 유닛 문서를 안 읽는다)
+let loadedUnits = new Set();
+let customWordsLoaded = false;
+let pendingUnits = new Set(); // 저널에 쌓인 유닛 (세션 종료 시 1문서씩 커밋)
 let showPron = false;        // 발음 표시 토글 (세션 전체 공용, 문제별 개별 아님)
 let progressLocked = false;  // Firestore 진도 로딩 실패 시 true → 저장(덮어쓰기) 잠금으로 기존 데이터 보호
 let isGuest = false;         // 게스트 체험 (v3 §5). 익명 인증도, Firestore 접근도 없다
+let studentDocExists = false; // 첫 오픈 로그인은 레벨 테스트 뒤에 students 문서를 1회 만든다
+let pendingLevelTest = false;
+let levelTest = null;
+let levelTestCache = null;
 
 /* 오답 페널티는 폐지했다 (v3 D7) — 틀린 답에서 돈을 깎으면 모르는 단어를 피하게 된다.
    틀린 문항은 돈 대신 세션 끝 재출제 1회로 되갚는다 (§3.4-1). */
 const REWARD = 100, KNOWN_STREAK = 3;
+const UNIT_PASS = 0.8;       // 아는 단어 비율이 이 이상이면 유닛 통과 표시
 
 /* ---------- 학생 초대 (Firestore invites) ----------
    공개 구글시트 학생목록 CSV는 폐기했다. 인증 없이 열리는 URL 하나에
@@ -389,12 +436,25 @@ async function fetchInvite(email){
 /* ---------- 학생별 단어 CSV (구글시트) ---------- */
 const vocabCache = {}; // 세션 동안만 유지, 새로고침하면 다시 fetch
 
+function isAllowedVocabUrl(url){
+  try{
+    const u = new URL(url);
+    return u.protocol === 'https:'
+      && (u.hostname === 'docs.google.com'
+          || u.hostname === 'googleusercontent.com'
+          || u.hostname.endsWith('.googleusercontent.com'));
+  }catch(e){ return false; }
+}
+
 async function fetchStudentVocab(url, retries=2){
   // 구글이 가끔 429/5xx를 돌려주므로 명단과 동일하게 재시도(백오프)로 방어
   let lastErr;
   for(let attempt=0; attempt<=retries; attempt++){
     try{
-      const res = await fetch(url, {cache:'no-store'});
+      const res = await fetch(url, {cache:'no-store', redirect:'follow'});
+      // 시트 「웹에 게시」는 docs.google.com 에서 googleusercontent.com 으로 302 한다.
+      // 최초 URL만 보면 리다이렉트 목적지를 못 막으므로 최종 URL도 같은 목록으로 본다.
+      if(!isAllowedVocabUrl(res.url || url)) throw new Error('단어 CSV 주소가 허용 목록 밖입니다');
       if(!res.ok) throw new Error('단어 CSV fetch 실패: HTTP '+res.status);
       const text = await res.text();
       const lines = text.trim().split(/\r?\n/).slice(1); // 헤더(날짜,한국어,발음,뜻,예문,예문뜻,카테고리,품사,타입) 제거
@@ -419,6 +479,7 @@ async function fetchStudentVocab(url, retries=2){
 
 async function getStudentVocab(invite){
   if(!invite.vocabCsvUrl) throw new Error('vocabCsvUrl 없음');
+  if(!isAllowedVocabUrl(invite.vocabCsvUrl)) throw new Error('단어 CSV 주소가 허용 목록 밖입니다');
   if(vocabCache[invite.vocabCsvUrl]) return vocabCache[invite.vocabCsvUrl];
   const words = await fetchStudentVocab(invite.vocabCsvUrl);
   if(words.length === 0) throw new Error('단어 0개');
@@ -463,8 +524,12 @@ function normalizeQuizText(s){
 
 /* 품사 뱃지 번역 (v3 §2.4). 목록에 없는 값은 시트 원문을 그대로 보여준다 */
 const POS_LABEL = {
-  fr:{'명사':'Nom','동사':'Verbe','형용사':'Adjectif','부사':'Adverbe','문법':'Grammaire','문장':'Phrase'},
-  en:{'명사':'Noun','동사':'Verb','형용사':'Adjective','부사':'Adverb','문법':'Grammar','문장':'Sentence'}
+  fr:{'명사':'Nom','동사':'Verbe','형용사':'Adjectif','부사':'Adverbe','문법':'Grammaire','문장':'Phrase',
+      '보조용언':'Auxiliaire','의존명사':'Nom dépendant','관형사':'Déterminant','고유명사':'Nom propre',
+      '대명사':'Pronom','수사':'Numéral','감탄사':'Interjection','분석불능':'Autre'},
+  en:{'명사':'Noun','동사':'Verb','형용사':'Adjective','부사':'Adverb','문법':'Grammar','문장':'Sentence',
+      '보조용언':'Aux. verb','의존명사':'Bound noun','관형사':'Determiner','고유명사':'Proper noun',
+      '대명사':'Pronoun','수사':'Numeral','감탄사':'Interjection','분석불능':'Other'}
 };
 function posLabel(pos){
   const raw = String(pos||'').trim();
@@ -493,23 +558,16 @@ async function getWordId(w){
   return 'h' + (await sha256Hex(w.ko + '|' + w.mean)).slice(0, 12);
 }
 
-/* 카드 문서가 없으면 곧 "아직 안 본 단어"다 → 저장하지 않는다 (v3 §3.6-①).
-   실측에서 진도 901항목 중 752개가 이 상태였다. 정보가 아니라 정보가 없다는 사실이다.
-   필드는 4~7단계(SRS·마스터·통계)가 쓸 자리까지 지금 전부 만들어 둔다. 값은 채우지 않는다. */
-const CARD_FIELDS = ['packId','due','lastReview','interval','ease','state',
-                     'reps','lapses','gradedCorrect','views','correctStreak',
-                     'firstSeenAt','masteredAt'];
+/* 카드가 없으면 곧 "아직 안 본 단어"다 → 저장하지 않는다.
+   due/interval/ease/state/lapses/firstSeenAt 은 버린다 (SRS 없음). */
+const CARD_FIELDS = ['reps','correctStreak','gradedCorrect','views'];
 function blankCard(){
   return {
-    packId: null,
-    due: null, lastReview: null, interval: 0, ease: 2.5,
-    state: 'learning',
-    reps: 0, lapses: 0,
-    gradedCorrect: 0,        // 채점 모드 누적 정답 → 마스터 판정 (4단계)
-    views: 0,                // 플래시카드 조회수 (6단계)
-    correctStreak: 0,        // v3 스키마에 없는 필드. 현재 UI의 "아는 단어"(3연속) 표시가
-                             // 여기에 의존한다. 4단계에서 SRS로 대체할 때 함께 정리한다
-    firstSeenAt: null, masteredAt: null
+    reps: 0,
+    correctStreak: 0,
+    gradedCorrect: 0,
+    views: 0,
+    masteredAt: null         // 유닛 문서 m[] 로만 저장. 메모리 판정용
   };
 }
 
@@ -536,11 +594,103 @@ async function buildWords(rows){
    - 진도는 저장하지 않고, 로그인해도 이관하지 않는다
    - 카운터는 sessionStorage — 탭을 닫으면 사라지고 localStorage에 흔적이 남지 않는다
    ===================================================================== */
-/* 공용 단어 팩 — 게스트 체험과 오픈 로그인이 같은 걸 쓴다.
-   서울 공용팩(D19)이 생기면 이 함수 하나만 갈아끼우면 된다. */
+/* 공용 단어 팩 — 게스트와 오픈 사용자가 같은 JSON 을 쓴다.
+   Firestore 에 넣지 않는다: 정적 파일 fetch 는 읽기 과금이 없다. */
 const OPEN_PACK_ID = 's-open';
-function openPackWords(lang){
-  return (lang === 'fr') ? SAMPLE.jessica.words : SAMPLE.corine.words;
+const DEFAULT_OPEN_UNIT = 'ko-A-01';
+const packCache = {}; // vocabCache 와 같이 세션 동안 레벨당 1회만 fetch
+
+function normalizePackLevel(v){
+  const s = String(v || 'A').toUpperCase();
+  return (s === 'B' || s === 'C') ? s : 'A';
+}
+
+async function loadPack(level){
+  const lv = normalizePackLevel(level);
+  if(packCache[lv]) return packCache[lv];
+  const res = await fetch('packs/ko-' + lv + '.json');
+  if(!res.ok) throw new Error('pack fetch HTTP ' + res.status);
+  const data = await res.json();
+  if(!data || !Array.isArray(data.units)) throw new Error('pack JSON 형식 오류: ' + lv);
+  packCache[lv] = data;
+  return data;
+}
+
+function packRowsForLang(pack, lang){
+  const rows = [];
+  const flags = [];
+  (pack.units || []).forEach(unit=>{
+    (unit.words || []).forEach(pw=>{
+      rows.push({
+        id: pw.id,                 // getWordId 가 이 값을 그대로 wordId 로 쓴다. 뜻으로 해시면 영↔불 때 진도가 끊긴다
+        ko: pw.ko,
+        pos: pw.pos,
+        pron: pw.pron,            // 팩에 5,965개 다 들어 있다
+        mean: lang === 'fr' ? pw.fr : pw.en,
+        type: 'word',
+        unitId: unit.id
+      });
+      flags.push(pw.quiz !== false);
+    });
+  });
+  return { rows, flags };
+}
+
+async function wordsFromPack(level, lang){
+  const pack = await loadPack(level);
+  const { rows, flags } = packRowsForLang(pack, lang);
+  const words = await buildWords(rows);
+  words.forEach((w, i)=>{
+    // 플래시카드에는 남기고 퀴즈만 뺀다. attachQuizFields 는 팩 플래그를 모른다
+    if(flags[i] === false) w.quizOk = false;
+  });
+  return words;
+}
+
+function lastUnitForLevel(level){
+  const prefix = 'ko-' + normalizePackLevel(level) + '-';
+  if(studentProg.cur && String(studentProg.cur).startsWith(prefix)) return studentProg.cur;
+  const ids = Object.keys(studentProg.u || {})
+    .filter(id => String(id).startsWith(prefix))
+    .sort();
+  return ids.length ? ids[ids.length - 1] : (prefix + '01');
+}
+
+async function persistProg(){
+  if(!currentUid || progressLocked) return;
+  studentProg.cur = currentUnitId;
+  if(currentPackLevel) studentProg.lvl = currentPackLevel;
+  await D().updateDoc(studentRef(), {
+    prog: studentProg,
+    lastUpdated: D().serverTimestamp()
+  });
+}
+
+async function switchPackLevel(level){
+  const lv = normalizePackLevel(level);
+  if(lv === currentPackLevel) return;
+  const lang = (student && student.lang) || 'en';
+  let packWords;
+  try{
+    packWords = await wordsFromPack(lv, lang);
+  }catch(e){
+    console.error('팩 전환 실패:', e);
+    alert(L.packLoadError);
+    return;
+  }
+  const custom = (student.words || []).filter(w => w.source === 'custom');
+  student.words = packWords.concat(custom);
+  currentPackLevel = lv;
+  studentProg.lvl = lv;
+  // 단어를 다시 만들었으므로 예전에 읽은 유닛 메모리는 무효. custom 만 남긴다
+  loadedUnits = new Set([...loadedUnits].filter(id => id === 'custom'));
+  const next = lastUnitForLevel(lv);
+  const available = listUnitIds();
+  currentUnitId = available.includes(next) ? next : defaultUnitId();
+  studentProg.cur = currentUnitId;
+  await loadUnit(currentUnitId);
+  try{ await persistProg(); }catch(e){ console.error('레벨 저장 실패:', e); }
+  renderHome();
 }
 
 const GUEST_Q_PER_WALL = 30;   // 누적 문제 수
@@ -587,22 +737,33 @@ function guestWallDue(){
 async function startGuest(){
   isGuest = true;
   currentUserEmail = null; currentUid = null; currentPackId = null;
-  pending = new Map();
+  pendingUnits = new Set();
+  loadedUnits = new Set();
+  customWordsLoaded = false;
   progressLocked = true;          // 저장 경로 전체 잠금
   guestReset();
   session = null; review = null;
   const lang = (loginLang === 'en') ? 'en' : 'fr';
   L = T[lang];
-  // 오픈 로그인과 같은 공용 팩. 학생 실명은 화면에 내보내지 않는다
-  student = { name: L.guestName, lang, words: await buildWords(openPackWords(lang)) };
-  bank = 0; bestStreak = 0;
-  document.documentElement.lang = lang;
-  renderHome();
+  renderVocabLoading(lang);
+  try{
+    const words = await wordsFromPack('A', lang);
+    student = { name: L.guestName, lang, words };
+    currentPackLevel = 'A';
+    currentUnitId = DEFAULT_OPEN_UNIT;
+    studentProg = { cur: currentUnitId, u: {}, lvl: 'A' };
+    bank = 0; bestStreak = 0;
+    document.documentElement.lang = lang;
+    renderHome();
+  }catch(e){
+    console.error('게스트 팩 로딩 실패:', e);
+    renderPackLoadError(lang, true);
+  }
 }
 
 function exitGuest(){
   isGuest = false;
-  student = null; session = null; review = null;
+  student = null; session = null; review = null; levelTest = null;
   bank = 0; bestStreak = 0;
   document.onkeydown = null;
   guestReset();
@@ -644,26 +805,102 @@ async function setupStudent(invite, words, lang){
 }
 
 /* =====================================================================
-   Firestore 데이터 계층 (v3 §2.1)
-     students/{uid}                        프로필 · 통계 · 팩
-     students/{uid}/cards/{wordId}         카드 1장 = 문서 1개
+   Firestore 데이터 계층
+     students/{uid}                        프로필 · 통계 · 팩 · prog
+     students/{uid}/units/{unitId}         유닛 1개 = 문서 1개
      students/{uid}/customWords/{wordId}   개인 단어
 
-   답 하나마다 srsProgress 맵 전체(약 90KB)를 다시 쓰던 persistProgress()는 폐기했다.
-   답 1개 = 90,000 B → 약 205 B.
+   홈은 students.prog 만으로 그린다. 학습을 시작할 때만 그 유닛 1개를 읽는다.
    ===================================================================== */
 
 const D = () => window.fb;
 const studentRef = ()   => D().doc(D().db, 'students', currentUid);
-const cardRef    = (id) => D().doc(D().db, 'students', currentUid, 'cards', id);
+const unitRef    = (id) => D().doc(D().db, 'students', currentUid, 'units', id);
 const customRef  = (id) => D().doc(D().db, 'students', currentUid, 'customWords', id);
 const subCol     = (name) => D().collection(D().db, 'students', currentUid, name);
 
+function isSheetUser(){
+  return !!(currentPackId && currentPackId !== OPEN_PACK_ID);
+}
+
+function unitIdForWord(w){
+  if(!w) return DEFAULT_OPEN_UNIT;
+  if(w.source === 'custom') return 'custom';
+  if(w.unitId) return w.unitId;
+  if(isSheetUser()){
+    const d = String(w.date || '').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? 'sheet-' + d : 'unsorted';
+  }
+  return DEFAULT_OPEN_UNIT;
+}
+
+function wordsInUnit(unitId){
+  return (student && student.words || []).filter(w => unitIdForWord(w) === unitId);
+}
+
+function listUnitIds(){
+  const ids = [];
+  const seen = new Set();
+  (student && student.words || []).forEach(w=>{
+    const id = unitIdForWord(w);
+    if(!seen.has(id)){ seen.add(id); ids.push(id); }
+  });
+  const rank = id => id === 'unsorted' ? 'zz0' : id === 'custom' ? 'zz1' : id;
+  ids.sort((a,b)=> rank(a).localeCompare(rank(b)));
+  return ids;
+}
+
+function defaultUnitId(){
+  const ids = listUnitIds().filter(id => id !== 'custom');
+  return ids[0] || DEFAULT_OPEN_UNIT;
+}
+
+function currentUnitWords(){
+  return wordsInUnit(currentUnitId);
+}
+
+function unitTotal(unitId){
+  return wordsInUnit(unitId).filter(w => w.type !== 'sentence').length;
+}
+
+function knownCountForUnit(unitId){
+  if(!currentUid || loadedUnits.has(unitId)){
+    return wordsInUnit(unitId).filter(w => ['known','master'].includes(wordStatus(w))).length;
+  }
+  return (studentProg.u && studentProg.u[unitId]) || 0;
+}
+
+function unitPassed(unitId){
+  const total = unitTotal(unitId);
+  return total > 0 && knownCountForUnit(unitId) / total >= UNIT_PASS;
+}
+
+function unitTitle(id){
+  if(id === 'custom') return L.unitCustom;
+  if(id === 'unsorted') return L.unitUnsorted;
+  const sheet = String(id||'').match(/^sheet-(\d{4}-\d{2}-\d{2})$/);
+  if(sheet){
+    try{ return fmtDate(sheet[1]); }catch(e){ return sheet[1]; }
+  }
+  const ko = String(id||'').match(/^ko-[ABC]-(\d+)$/);
+  if(ko) return L.unitNamed(parseInt(ko[1], 10));
+  return id;
+}
+
 function cardPayload(w){
-  const out = {};
-  CARD_FIELDS.forEach(k=>{ out[k] = (w[k] === undefined) ? null : w[k]; });
-  out.packId = (w.source === 'custom') ? 'custom' : (currentPackId || null);
-  return out;
+  return [w.reps|0, w.correctStreak|0, w.gradedCorrect|0, w.views|0];
+}
+
+function packedFromMemory(unitId){
+  const p = {};
+  const m = [];
+  wordsInUnit(unitId).forEach(w=>{
+    if((w.reps|0) > 0 || (w.views|0) > 0 || (w.gradedCorrect|0) > 0 || w.masteredAt){
+      p[w.wordId] = cardPayload(w);
+      if(w.masteredAt) m.push(w.wordId);
+    }
+  });
+  return { p, m };
 }
 
 function newStudentDoc(){
@@ -672,37 +909,96 @@ function newStudentDoc(){
       displayName: student.name,
       uiLang: student.lang,
       meaningLang: student.lang,     // 지금은 같은 값. v1.1에서 분리된다 (D13)
-      createdAt: D().serverTimestamp(),
-      role: 'student'
+      createdAt: D().serverTimestamp()
+      // role 은 클라이언트가 쓰지 않는다. 브라우저에서 admin 으로 바꿀 수 있다.
+      // 역할이 필요해지면 admin SDK 또는 커스텀 클레임으로 넣는다.
     },
-    // 4~7단계(SRS·스트릭·통계)가 쓸 자리. 오늘은 points만 실제로 채운다
     stats: {
       points: 100, wordsLearned: 0, wordsMastered: 0, totalReviews: 0,
       cardViews: 0, currentStreak: 0, longestStreak: 0,
       lastStudyDate: null, restTokens: 2
     },
     packs: currentPackId ? [currentPackId] : [],
+    prog: {
+      cur: currentUnitId || defaultUnitId(),
+      u: (studentProg && studentProg.u) || {},
+      ...(currentPackLevel ? { lvl: currentPackLevel } : {})
+    },
     lastUpdated: D().serverTimestamp()
   };
 }
 
-async function restoreProgress(){
-  const snap = await D().getDoc(studentRef());
+function applyCard(w, c){
+  if(Array.isArray(c)){
+    w.reps = c[0]|0;
+    w.correctStreak = c[1]|0;
+    w.gradedCorrect = c[2]|0;
+    w.views = c[3]|0;
+    return;
+  }
+  if(c && typeof c === 'object'){
+    CARD_FIELDS.forEach(k=>{ if(c[k] !== undefined && c[k] !== null) w[k] = c[k]; });
+    if(c.masteredAt) w.masteredAt = c.masteredAt;
+  }
+}
+
+function applyPackedUnit(unitId, packed){
+  if(!packed) return;
+  const p = packed.p || {};
+  const mastered = new Set(Array.isArray(packed.m) ? packed.m : []);
+  student.words.forEach(w=>{
+    if(unitIdForWord(w) !== unitId) return;
+    if(p[w.wordId] !== undefined) applyCard(w, p[w.wordId]);
+    if(mastered.has(w.wordId) && !w.masteredAt) w.masteredAt = true;
+  });
+}
+
+async function restoreProgress(preloadedSnap){
+  const snap = preloadedSnap !== undefined ? preloadedSnap : await D().getDoc(studentRef());
+  studentDocExists = !!(snap && snap.exists());
   if(snap.exists()){
     const data = snap.data() || {};
     bank = typeof data?.stats?.points === 'number' ? data.stats.points : 100;
+    const prog = data.prog || {};
+    studentProg = {
+      cur: prog.cur || null,
+      u: (prog.u && typeof prog.u === 'object' && !Array.isArray(prog.u)) ? prog.u : {},
+      lvl: currentPackLevel || (prog.lvl ? normalizePackLevel(prog.lvl) : null)
+    };
+    if(!isSheetUser() && !studentProg.cur){
+      pendingLevelTest = true;
+      currentUnitId = null;
+      return;
+    }
+    if(!studentProg.cur) studentProg.cur = defaultUnitId();
   } else {
     bank = 100;
+    if(!isSheetUser()){
+      studentProg = { cur: null, u: {}, lvl: null };
+      currentUnitId = null;
+      pendingLevelTest = true;
+      return;
+    }
+    studentProg = { cur: defaultUnitId(), u: {}, lvl: currentPackLevel || null };
     await D().setDoc(studentRef(), newStudentDoc());
+    studentDocExists = true;
   }
-  await loadCustomWords();
-  await loadCards();
+  const available = listUnitIds();
+  if(studentProg.cur !== 'custom' && available.length && !available.includes(studentProg.cur)){
+    studentProg.cur = defaultUnitId();
+  }
+  currentUnitId = studentProg.cur || defaultUnitId();
   await recoverJournal();
+  await loadUnit(currentUnitId);
 }
 
-async function loadCustomWords(){
+async function ensureCustomWords(){
+  if(customWordsLoaded || !student) return;
+  customWordsLoaded = true;
+  if(!currentUid || progressLocked) return;
   const snap = await D().getDocs(subCol('customWords'));
   snap.forEach(d=>{
+    if(student.words.some(w=>w.wordId===d.id)) return;
     const cw = d.data() || {};
     student.words.push({
       ...attachQuizFields({ko: cw.ko, mean: cw.mean, type:'word'}),
@@ -713,49 +1009,260 @@ async function loadCustomWords(){
   });
 }
 
-function applyCard(w, c){
-  CARD_FIELDS.forEach(k=>{ if(c[k] !== undefined && c[k] !== null) w[k] = c[k]; });
-}
-
-async function loadCards(){
-  const snap = await D().getDocs(subCol('cards'));
-  const byId = new Map();
-  snap.forEach(d=>byId.set(d.id, d.data() || {}));
+async function loadUnit(unitId){
+  if(!unitId || !currentUid || progressLocked) return;
+  if(unitId === 'custom') await ensureCustomWords();
+  if(loadedUnits.has(unitId)) return;
+  const snap = await D().getDoc(unitRef(unitId));
+  loadedUnits.add(unitId);
+  if(!snap.exists()) return;
+  const data = snap.data() || {};
+  const p = data.p || {};
+  const mastered = new Set(Array.isArray(data.m) ? data.m : []);
   student.words.forEach(w=>{
-    const c = byId.get(w.wordId);
-    if(c) applyCard(w, c);
+    if(unitIdForWord(w) !== unitId) return;
+    if(p[w.wordId] !== undefined) applyCard(w, p[w.wordId]);
+    if(mastered.has(w.wordId) && !w.masteredAt) w.masteredAt = true;
   });
 }
 
-/* ---------- 세션 배치 커밋 (v3 §3.6-④) ----------
-   세션 중에는 메모리 + localStorage 저널에만 쌓고, 종료 시 writeBatch로 한 번에 커밋한다.
-   같은 단어가 세션에 두 번 나오면 Map이 1쓰기로 병합한다.
+async function selectUnit(unitId){
+  currentUnitId = unitId;
+  studentProg.cur = unitId;
+  await loadUnit(unitId);
+  renderHome();
+}
+
+/* =====================================================================
+   📍 레벨 테스트 (설계결정 §1-9)
+   고정 21문항. 한국어→뜻만. 오답 3개는 파일에 고정. 정답/오답 피드백 없음.
+   Firestore 는 문항 로드에 쓰지 않는다. 결과는 prog 쓰기 1회.
+   ===================================================================== */
+const LEVEL_UNIT_COUNT = { A: 29, B: 61, C: 83 };
+
+function unitsInLevel(level){
+  const pack = packCache[level];
+  if(pack && Array.isArray(pack.units) && pack.units.length) return pack.units.length;
+  return LEVEL_UNIT_COUNT[level] || 29;
+}
+
+function meaningLang(){
+  return ((student && student.lang) === 'fr' || L === T.fr) ? 'fr' : 'en';
+}
+
+async function loadLevelTestItems(){
+  if(levelTestCache) return levelTestCache;
+  const res = await fetch('packs/leveltest.json');
+  if(!res.ok) throw new Error('leveltest HTTP ' + res.status);
+  const data = await res.json();
+  const items = Array.isArray(data.items) ? data.items.slice() : [];
+  const order = { A: 0, B: 1, C: 2 };
+  items.sort((a, b) => (order[a.lvl] ?? 9) - (order[b.lvl] ?? 9) || (a.band|0) - (b.band|0));
+  levelTestCache = items;
+  return items;
+}
+
+function placeFromScores(by){
+  let level, n;
+  if((by.A|0) <= 5){ level = 'A'; n = by.A|0; }
+  else if((by.B|0) <= 5){ level = 'B'; n = by.B|0; }
+  else { level = 'C'; n = by.C|0; }
+  const unitN = Math.floor(unitsInLevel(level) * n / 8) + 1;
+  return { level, unitN, by, total: (by.A|0) + (by.B|0) + (by.C|0) };
+}
+
+function scoreLevelTest(qs, picked){
+  const by = { A: 0, B: 0, C: 0 };
+  qs.forEach((q, i) => {
+    if(picked[i] === q.answer) by[q.lvl] = (by[q.lvl]|0) + 1;
+  });
+  return placeFromScores(by);
+}
+
+async function persistPlacement(){
+  if(!currentUid || progressLocked || isGuest) return;
+  studentProg.cur = currentUnitId;
+  if(currentPackLevel) studentProg.lvl = currentPackLevel;
+  if(!studentDocExists){
+    await D().setDoc(studentRef(), newStudentDoc());
+    studentDocExists = true;
+    return;
+  }
+  await persistProg();
+}
+
+async function applyLevelPlacement(level, unitN){
+  const lv = normalizePackLevel(level);
+  const n = Math.max(1, unitN|0);
+  const unitId = `ko-${lv}-${String(n).padStart(2, '0')}`;
+  const lang = (student && student.lang) || 'en';
+  if(currentPackLevel !== lv){
+    let packWords;
+    try{
+      packWords = await wordsFromPack(lv, lang);
+    }catch(e){
+      console.error('레벨 테스트 팩 전환 실패:', e);
+      alert(L.packLoadError);
+      return;
+    }
+    const custom = (student.words || []).filter(w => w.source === 'custom');
+    student.words = packWords.concat(custom);
+    currentPackLevel = lv;
+    loadedUnits = new Set([...loadedUnits].filter(id => id === 'custom'));
+  }
+  currentUnitId = unitId;
+  studentProg.cur = unitId;
+  studentProg.lvl = lv;
+  try{ await persistPlacement(); }catch(e){ console.error('레벨 테스트 배치 저장 실패:', e); }
+  try{ await loadUnit(currentUnitId); }catch(e){ console.error(e); }
+  levelTest = null;
+  renderHome();
+}
+
+async function startLevelTest(){
+  document.onkeydown = null;
+  session = null;
+  review = null;
+  botnav.classList.add('hidden');
+  let items;
+  try{
+    items = await loadLevelTestItems();
+  }catch(e){
+    console.error('레벨 테스트 로딩 실패:', e);
+    alert(L.packLoadError);
+    if(!currentUnitId){
+      await applyLevelPlacement('A', 1);
+      return;
+    }
+    renderHome();
+    return;
+  }
+  const lang = meaningLang();
+  const qs = items.map(it => {
+    const side = it[lang] || it.en || {};
+    const answer = side.answer;
+    const options = shuffle([answer, ...(side.wrong || [])]);
+    return { id: it.id, ko: it.ko, lvl: it.lvl, band: it.band, answer, options };
+  });
+  levelTest = { qs, i: 0, picked: [], locked: false };
+  renderLevelTestQ();
+}
+
+function skipLevelTest(){
+  if(!levelTest) return;
+  levelTest = null;
+  applyLevelPlacement('A', 1);
+}
+
+function renderLevelTestQ(){
+  const t = levelTest;
+  if(!t) return;
+  t.locked = false;
+  const q = t.qs[t.i];
+  botnav.classList.add('hidden');
+  app.innerHTML = topbar() + `
+    <div class="quiz-top">
+      <div class="progress"><i style="width:${(t.i/t.qs.length)*100}%"></i></div>
+    </div>
+    <div class="q-count">${t.i + 1} / ${t.qs.length}</div>
+    <div class="card">
+      <div class="prompt">
+        <div class="plabel">${L.promptKo}</div>
+        <div class="pword kr" id="ltPrompt"></div>
+      </div>
+      <div class="options" id="ltOptions"></div>
+    </div>
+    <div class="btn-row" style="margin-top:18px">
+      <button class="btn secondary" id="ltSkip">${L.ltSkip}</button>
+    </div>`;
+  $('#ltPrompt').textContent = q.ko;
+  const optEl = $('#ltOptions');
+  q.options.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = `<span class="mark"></span><span class="kr"></span>`;
+    b.querySelector('.kr').textContent = opt;
+    b.onclick = () => answerLevelTest(opt);
+    optEl.appendChild(b);
+  });
+  $('#ltSkip').onclick = skipLevelTest;
+}
+
+function answerLevelTest(opt){
+  const t = levelTest;
+  if(!t || t.locked) return;
+  t.locked = true;
+  t.picked[t.i] = opt;
+  t.i += 1;
+  if(t.i >= t.qs.length) renderLevelTestResult();
+  else renderLevelTestQ();
+}
+
+function renderLevelTestResult(){
+  const t = levelTest;
+  if(!t) return;
+  const s = scoreLevelTest(t.qs, t.picked);
+  t.result = s;
+  const name = s.level === 'A' ? L.levelA : s.level === 'B' ? L.levelB : L.levelC;
+  botnav.classList.add('hidden');
+  app.innerHTML = topbar() + `
+    <div class="hello">
+      <img src="${IMG.excited}" alt="">
+      <div>
+        <h2>${L.ltYourStart}</h2>
+        <div class="sub">${escapeHtml(L.ltUnitLine(s.unitN, s.level, name))}</div>
+        <div class="sub">${escapeHtml(L.ltOfCorrect(s.total, t.qs.length))}</div>
+      </div>
+    </div>
+    <div class="btn-row" style="flex-direction:column;margin-top:22px">
+      <button class="btn" id="ltHere">${L.ltStartHere}</button>
+      <button class="btn secondary" id="ltOver">${L.ltStartOver}</button>
+    </div>`;
+  $('#ltHere').onclick = () => applyLevelPlacement(s.level, s.unitN);
+  $('#ltOver').onclick = () => applyLevelPlacement(s.level, 1);
+}
+
+/* ---------- 세션 배치 커밋
+   세션 중에는 메모리 + localStorage 저널에만 쌓고, 종료 시 유닛 1 + students 1 = 쓰기 2회.
    중도 이탈하면 저널이 남아 다음 실행에서 복구된다. */
-let pending = new Map();     // wordId → 카드 payload
 const journalKey = () => 'vocabank_journal_' + currentUid;
 
 function journalCard(w){
   if(!currentUid || progressLocked) return;
-  pending.set(w.wordId, cardPayload(w));
+  const unitId = unitIdForWord(w);
+  pendingUnits.add(unitId);
   try{
+    const units = {};
+    pendingUnits.forEach(id=>{ units[id] = packedFromMemory(id); });
     localStorage.setItem(journalKey(), JSON.stringify({
-      points: bank, cards: Object.fromEntries(pending)
+      points: bank, cur: currentUnitId, units
     }));
   }catch(e){ /* 저장공간 부족 — 세션 종료 시 메모리에서 커밋된다 */ }
 }
 
 async function commitJournal(){
-  if(!currentUid || progressLocked || pending.size === 0) return;
-  const cards = Object.fromEntries(pending);
+  if(!currentUid || progressLocked || pendingUnits.size === 0) return;
+  const units = [...pendingUnits];
+  units.forEach(id=>{ studentProg.u[id] = knownCountForUnit(id); });
+  studentProg.cur = currentUnitId;
   const points = bank;
   const batch = D().writeBatch(D().db);
-  Object.entries(cards).forEach(([wordId, card])=>{
-    batch.set(cardRef(wordId), card, {merge:true});
+  units.forEach(id=>{
+    const packed = packedFromMemory(id);
+    batch.set(unitRef(id), {
+      p: packed.p,
+      m: packed.m,
+      at: D().serverTimestamp()
+    }, {merge:true});
   });
-  batch.update(studentRef(), {'stats.points': points, lastUpdated: D().serverTimestamp()});
+  batch.update(studentRef(), {
+    'stats.points': points,
+    prog: studentProg,
+    lastUpdated: D().serverTimestamp()
+  });
   try{
     await batch.commit();
-    pending.clear();
+    pendingUnits.clear();
     localStorage.removeItem(journalKey());
   }catch(e){
     console.error('세션 저장 실패 — 저널을 남겨 다음 실행에서 재시도합니다:', e);
@@ -766,14 +1273,30 @@ async function recoverJournal(){
   if(!currentUid || progressLocked) return;
   let saved = null;
   try{ saved = JSON.parse(localStorage.getItem(journalKey()) || 'null'); }catch(e){}
-  if(!saved || !saved.cards || Object.keys(saved.cards).length === 0) return;
+  if(!saved) return;
+  const hasUnits = saved.units && typeof saved.units === 'object' && Object.keys(saved.units).length;
+  const hasOldCards = saved.cards && typeof saved.cards === 'object' && Object.keys(saved.cards).length;
+  if(!hasUnits && !hasOldCards) return;
   console.info('이전 세션의 미저장 진도를 복구합니다.');
   if(typeof saved.points === 'number') bank = Math.max(bank, saved.points);
-  student.words.forEach(w=>{
-    const c = saved.cards[w.wordId];
-    if(c) applyCard(w, c);
-  });
-  pending = new Map(Object.entries(saved.cards));
+  if(hasUnits){
+    if(saved.units.custom) await ensureCustomWords();
+    Object.entries(saved.units).forEach(([unitId, packed])=>{
+      applyPackedUnit(unitId, packed);
+      pendingUnits.add(unitId);
+      loadedUnits.add(unitId);
+    });
+  } else if(hasOldCards){
+    await ensureCustomWords();
+    student.words.forEach(w=>{
+      const c = saved.cards[w.wordId];
+      if(c){
+        applyCard(w, c);
+        pendingUnits.add(unitIdForWord(w));
+      }
+    });
+  }
+  if(saved.cur) currentUnitId = saved.cur;
   await commitJournal();
 }
 
@@ -834,7 +1357,10 @@ async function removeCustomWord(w){
   if(!currentUid || progressLocked) return;
   try{
     await D().deleteDoc(customRef(w.wordId));
-    await D().deleteDoc(cardRef(w.wordId));    // 단어를 지우면 진도도 같이 지운다
+    pendingUnits.add('custom');
+    loadedUnits.add('custom');
+    studentProg.u.custom = knownCountForUnit('custom');
+    await commitJournal();
   }catch(e){ console.error('개인 단어 삭제 실패', e); }
 }
 
@@ -844,6 +1370,9 @@ async function handleLoginSuccess(user){
   // 게스트 샘플·카운터는 여기서 끊는다. 학생 문서에는 자기 시트만 들어간다
   isGuest = false;
   guestReset();
+  studentDocExists = false;
+  pendingLevelTest = false;
+  levelTest = null;
   // 조회 실패(네트워크·권한)와 문서 없음(미등록)은 전혀 다른 상황이다. 뭉뚱그리지 않는다.
   let invite;
   try{
@@ -870,17 +1399,31 @@ async function handleLoginSuccess(user){
   currentUserEmail = email;
   currentUid = user.uid;                 // Firestore 문서 키는 uid. 콘솔 목록에 이메일이 안 보인다
   currentPackId = invite.packId || null;
-  pending = new Map();
+  pendingUnits = new Set();
+  loadedUnits = new Set();
+  customWordsLoaded = false;
+  studentProg = { cur: null, u: {}, lvl: null };
+  currentUnitId = null;
+  currentPackLevel = null;
   const lang = (invite.lang||'en').toLowerCase();
   renderVocabLoading(lang);
   progressLocked = false;
 
   // ── 1단계: 단어 불러오기 ──
-  // 오픈 사용자는 공용 팩이라 네트워크가 필요 없다.
-  // 등록 학생은 자기 시트를 읽고, 실패하면 = 진짜로 단어가 준비 안 됨 → 안내 화면
+  // 오픈 사용자는 공용 팩 JSON (레벨당 fetch 1회). 등록 학생은 자기 시트만 — 팩으로 대체하지 않는다.
   let words;
+  let studentSnap;
   if(isOpenUser){
-    words = openPackWords(lang);
+    try{
+      studentSnap = await D().getDoc(studentRef());
+      const savedLvl = studentSnap.exists() ? (studentSnap.data().prog || {}).lvl : 'A';
+      currentPackLevel = normalizePackLevel(savedLvl);
+      words = await wordsFromPack(currentPackLevel, lang);
+    } catch(e){
+      console.error('① 공용 팩 로딩 실패:', e);
+      renderPackLoadError(lang, false);
+      return;
+    }
   } else {
     try{
       words = await getStudentVocab(invite);
@@ -892,14 +1435,21 @@ async function handleLoginSuccess(user){
   }
   await setupStudent(invite, words, lang);
 
-  // ── 2단계: Firestore에서 포인트/카드/개인단어 불러오기 ──
-  // 여기서 실패하면 = 서버 문제일 뿐 단어는 멀쩡. 앱은 열되 저장은 잠가서 기존 데이터 보호
+  currentUnitId = defaultUnitId();
+  studentProg = { cur: currentUnitId, u: {}, lvl: currentPackLevel };
+
+  // ── 2단계: Firestore에서 포인트/prog/현재 유닛 불러오기 ──
   try{
-    await restoreProgress();
+    await restoreProgress(isOpenUser ? studentSnap : undefined);
   } catch(e){
     console.error('② 진도 불러오기 실패 (Firestore 문제 — 앱은 열지만 저장을 잠급니다):', e);
     progressLocked = true;
     bank = 0; // 실제 저장은 잠겨 있으므로 화면 표시만 0. 기존 데이터는 덮어쓰지 않음
+  }
+  if(pendingLevelTest){
+    pendingLevelTest = false;
+    startLevelTest();
+    return;
   }
   renderHome();
 }
@@ -913,7 +1463,15 @@ async function doLogout(){
   currentUserEmail = null;
   currentUid = null;
   currentPackId = null;
-  pending = new Map();
+  currentPackLevel = null;
+  currentUnitId = null;
+  studentProg = { cur: null, u: {}, lvl: null };
+  loadedUnits = new Set();
+  customWordsLoaded = false;
+  pendingUnits = new Set();
+  studentDocExists = false;
+  pendingLevelTest = false;
+  levelTest = null;
   if(hadUser){
     try{ await window.fb.signOut(window.fb.auth); } catch(e){ console.error(e); }
     // onAuthStateChanged가 renderLogin() 처리
@@ -924,13 +1482,33 @@ async function doLogout(){
 
 /* ---------- 앱 시작 (Firebase 준비된 뒤) ---------- */
 function initApp(){
+  /* ?debugfs=1 일 때만 호출 횟수를 센다. window.__fs 로 확인. */
+  if(window.fb && !window.fb.__fsWrapped && new URLSearchParams(location.search).has('debugfs')){
+    const fb = window.fb;
+    const n = window.__fs = { getDoc:0, getDocs:0, setDoc:0, updateDoc:0, deleteDoc:0, writeBatch:0, writes:0 };
+    const wrap = (k) => { const orig = fb[k].bind(fb); fb[k] = (...a)=>{ n[k]++; return orig(...a); }; };
+    wrap('getDoc'); wrap('getDocs'); wrap('setDoc'); wrap('updateDoc'); wrap('deleteDoc');
+    const origBatch = fb.writeBatch.bind(fb);
+    fb.writeBatch = (db) => {
+      n.writeBatch++;
+      const b = origBatch(db);
+      const set = b.set.bind(b), upd = b.update.bind(b), del = b.delete.bind(b);
+      b.set = (...a)=>{ n.writes++; return set(...a); };
+      b.update = (...a)=>{ n.writes++; return upd(...a); };
+      b.delete = (...a)=>{ n.writes++; return del(...a); };
+      return b;
+    };
+    fb.__fsWrapped = true;
+  }
   window.fb.onAuthStateChanged(window.fb.auth, user=>{
     if(user && user.email) handleLoginSuccess(user).catch(e=>{
       // 예전에는 여기서 예외가 조용히 사라져 흰 화면이 됐다
       console.error('로그인 처리 실패:', e);
       renderBootError(String((e && e.message) || e));
     });
-    else { currentUserEmail = null; currentUid = null; currentPackId = null; pending = new Map();
+    else { currentUserEmail = null; currentUid = null; currentPackId = null; currentPackLevel = null;
+           currentUnitId = null; studentProg = { cur: null, u: {}, lvl: null };
+           loadedUnits = new Set(); customWordsLoaded = false; pendingUnits = new Set();
            isGuest = false; guestReset(); renderLogin(); }
   });
 }
@@ -1090,6 +1668,29 @@ function renderVocabLoading(lang){
     </div>`;
 }
 
+function renderPackLoadError(lang, fromGuest){
+  botnav.classList.add('hidden');
+  const Lx = T[lang] || T.en;
+  L = Lx;
+  app.innerHTML = `
+    <div class="result">
+      <img src="${IMG.surprised}" alt="">
+      <div class="score" style="max-width:380px;margin:0 auto 18px">${Lx.packLoadError}</div>
+      <div class="btn-row" style="flex-direction:column">
+        <button class="btn chili" id="packErrBtn">${fromGuest ? Lx.wallBackToLogin : '🚪 ' + Lx.logout}</button>
+      </div>
+    </div>`;
+  $('#packErrBtn').onclick = async ()=>{
+    isGuest = false;
+    currentUserEmail = null; currentUid = null; currentPackId = null; currentPackLevel = null;
+    currentUnitId = null; studentProg = { cur: null, u: {}, lvl: null };
+    loadedUnits = new Set(); customWordsLoaded = false; pendingUnits = new Set();
+    if(fromGuest){ renderLogin(); return; }
+    try{ await window.fb.signOut(window.fb.auth); }
+    catch(e){ console.error(e); renderLogin(); }
+  };
+}
+
 function renderVocabNotReady(lang){
   botnav.classList.add('hidden');
   const Lx = T[lang] || T.en;
@@ -1103,8 +1704,9 @@ function renderVocabNotReady(lang){
     </div>`;
   // doLogout() 은 student 와 L 에 의존한다 — 여기선 둘 다 아직 없으므로 직접 로그아웃한다
   $('#vocabLogoutBtn').onclick = async ()=>{
-    currentUserEmail = null; currentUid = null; currentPackId = null;
-    pending = new Map();
+    currentUserEmail = null; currentUid = null; currentPackId = null; currentPackLevel = null;
+    currentUnitId = null; studentProg = { cur: null, u: {}, lvl: null };
+    loadedUnits = new Set(); customWordsLoaded = false; pendingUnits = new Set();
     try{ await window.fb.signOut(window.fb.auth); }   // onAuthStateChanged → renderLogin()
     catch(e){ console.error(e); renderLogin(); }
   };
@@ -1112,14 +1714,45 @@ function renderVocabNotReady(lang){
 
 /* ---------- 오늘 복습 예정 개수 (SRS 데모) ---------- */
 function dueCount(){
-  // 데모: 아직 안 본 것 + status가 new/learning인 것을 "복습 대상"으로
-  // (문장은 퀴즈에 출제하지 않으므로 카운트에서 제외)
-  return student.words.filter(w=>wordStatus(w)!=="master" && w.type!=="sentence").length;
+  return currentUnitWords().filter(w=>wordStatus(w)!=="master" && w.type!=="sentence").length;
 }
 function stats(){
   const learned = student.words.filter(w=>(w.gradedCorrect||0)>0).length;
-  const known = student.words.filter(w=>["known","master"].includes(wordStatus(w))).length;
+  const known = listUnitIds().reduce((n, id) => n + knownCountForUnit(id), 0);
   return {learned, known};
+}
+
+function levelSwitchHtml(){
+  if(isSheetUser()) return '';
+  const lv = currentPackLevel || 'A';
+  const btn = (id, label) =>
+    `<button type="button" class="btn ${lv===id ? '' : 'secondary'}" data-lvl="${id}" style="flex:1;padding:10px 8px;font-size:.82rem">${id} · ${escapeHtml(label)}</button>`;
+  return `<div class="section-title">${L.levelSection}</div>
+    <div style="display:flex;gap:8px;margin:0 2px 16px">
+      ${btn('A', L.levelA)}${btn('B', L.levelB)}${btn('C', L.levelC)}
+    </div>`;
+}
+
+function unitListHtml(){
+  const ids = listUnitIds();
+  const cur = currentUnitId || ids[0];
+  if(!cur) return '';
+  const row = (id, accent)=>{
+    const total = unitTotal(id);
+    const known = knownCountForUnit(id);
+    const check = unitPassed(id) ? ' ✓' : '';
+    const emoji = id === 'custom' ? '📝' : (id === cur ? '📌' : '📗');
+    return `<button class="menu-btn" data-unit="${escapeHtml(id)}" ${accent ? 'style="border-color:var(--accent)"' : ''}>
+      <span class="emoji">${emoji}</span>
+      <span class="mtext"><b>${escapeHtml(unitTitle(id))}${check}</b>
+        <span>${known}/${total}${id===cur ? ' · ' + L.continueStudy : ''}</span></span>
+      <span class="arrow">→</span>
+    </button>`;
+  };
+  const rest = ids.filter(id => id !== cur);
+  return `<div class="section-title">${L.unitSection}</div>` +
+    row(cur, true) +
+    rest.map(id => row(id, false)).join('');
 }
 
 /* ---------- 홈 ---------- */
@@ -1149,6 +1782,9 @@ function renderHome(){
       <div class="stat"><b>${bestStreak}🔥</b><span>${L.statStreak}</span></div>
     </div>
 
+    ${levelSwitchHtml()}
+    ${unitListHtml()}
+
     <div class="section-title">${L.sectionPlay}</div>
     <button class="menu-btn" id="quizBtn" style="border-color:var(--accent)">
       <span class="emoji">🎯</span>
@@ -1160,6 +1796,12 @@ function renderHome(){
       <span class="mtext"><b>${L.review}</b><span>${L.reviewSub}</span></span>
       <span class="badge">${dueCount()} ${L.todayReview}</span>
     </button>
+    ${!isSheetUser() ? `
+    <button class="menu-btn" id="levelTestBtn">
+      <span class="emoji">📍</span>
+      <span class="mtext"><b>${L.ltRetake}</b><span>${L.ltRetakeSub}</span></span>
+      <span class="arrow">→</span>
+    </button>` : ''}
 
     <div class="section-title">${L.sectionBrowse}</div>
     <button class="menu-btn" id="wordsBtn">
@@ -1184,24 +1826,60 @@ function renderHome(){
       <span class="arrow">→</span>
     </button>`}
   `;
-  $('#quizBtn').onclick = ()=>startQuiz(student.words);
+  $('#quizBtn').onclick = ()=>startQuiz(currentUnitWords());
   $('#reviewBtn').onclick = ()=>startReview('due');
+  const ltBtn = $('#levelTestBtn');
+  if(ltBtn) ltBtn.onclick = ()=>startLevelTest();
   $('#wordsBtn').onclick = ()=>renderWords();
   $('#knownBtn').onclick = renderKnown;
   if(!isGuest){
-    $('#myWordsBtn').onclick = renderMyWords;
+    $('#myWordsBtn').onclick = ()=>renderMyWords();
     $('#addWordBtn').onclick = ()=>renderAddWord();
   } else {
     $('#guestLoginBtn').onclick = exitGuest;
   }
   $('#statLearned').onclick = renderLearned;
   $('#statKnown').onclick = renderKnown;
+  app.querySelectorAll('[data-unit]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.unit;
+      if(id === currentUnitId) startQuiz(currentUnitWords());
+      else selectUnit(id);
+    };
+  });
+  app.querySelectorAll('[data-lvl]').forEach(btn=>{
+    btn.onclick = ()=>switchPackLevel(btn.dataset.lvl);
+  });
 }
 
 /* ---------- 날짜별 단어 ---------- */
 function renderWords(selectedDate = "all"){
   botnav.classList.remove('hidden');
   setNav('words');
+  if(!isSheetUser()){
+    const units = listUnitIds();
+    const byUnit = {};
+    units.forEach(id => { byUnit[id] = wordsInUnit(id); });
+    const shown = selectedDate === 'all' ? units : units.filter(id => id === selectedDate);
+    let html = backBtn() + topbar() + `<h2 style="margin:6px 2px 4px">📖 ${L.words}</h2>
+      <div class="sub" style="color:var(--text-muted);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>
+      <select id="dateFilter" style="width:100%;margin:10px 0 2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;font-size:1rem;color:var(--text);font-family:inherit;cursor:pointer">
+        <option value="all">📅 ${L.allDates}</option>
+        ${units.map(id=>`<option value="${escapeHtml(id)}" ${id===selectedDate?'selected':''}>${escapeHtml(unitTitle(id))} · ${byUnit[id].length}</option>`).join('')}
+      </select>`;
+    shown.forEach(id=>{
+      const list = byUnit[id] || [];
+      html += `<div class="day-block">
+        <div class="day-head">📗 ${escapeHtml(unitTitle(id))} <span class="count">· ${list.length}</span></div>`;
+      list.forEach(w=>{ html += wordRowHtml(w); });
+      html += `</div>`;
+    });
+    app.innerHTML = html;
+    wireBackBtn();
+    wireDeleteButtons(()=>renderWords(selectedDate));
+    $('#dateFilter').onchange = (e)=>renderWords(e.target.value);
+    return;
+  }
   const byDate = {};
   student.words.forEach(w=>{ (byDate[w.date] ||= []).push(w); });
   const dates = Object.keys(byDate).sort().reverse();
@@ -1337,8 +2015,9 @@ function renderLearned(){
 }
 
 /* ---------- 내가 추가한 단어만 모아보기 ---------- */
-function renderMyWords(){
+async function renderMyWords(){
   botnav.classList.add('hidden');
+  await ensureCustomWords();
   const mine = student.words.filter(w=>w.source==='custom').sort((a,b)=>(a.order??0)-(b.order??0));
   let html = backBtn() + topbar() + `<div class="hello">
       <img src="${IMG.study}" alt="" style="width:70px">
@@ -1391,8 +2070,9 @@ function wireMyWordControls(mine){
 }
 
 /* ---------- 나만의 단어 추가 ---------- */
-function renderAddWord(editId){
+async function renderAddWord(editId){
   botnav.classList.add('hidden');
+  await ensureCustomWords();
   const editing = (editId != null)
     ? student.words.find(w=>w.wordId===editId && w.source==='custom')
     : null;
@@ -1615,15 +2295,16 @@ function renderHelp(){
    ===================================================================== */
 
 function reviewPool(mode){
-  // 복습은 출제 제한과 무관 — 퀴즈에 안 나오는 문법 규칙·설명형 단어도 카드로는 보여준다
-  const words = student.words.filter(w=>w.type!=="sentence" && w.ko && w.mean);
+  // 플래시카드는 현재 유닛에서만. 퀴즈에 안 나오는 문법 규칙·설명형 단어도 카드로는 보여준다
+  const words = currentUnitWords().filter(w=>w.type!=="sentence" && w.ko && w.mean);
   if(mode==='all') return words;
   const due = words.filter(w=>wordStatus(w)!=="master");
   return due.length ? due : words;   // 전부 마스터면 그냥 전체 보여주기
 }
 
-function startReview(mode='due'){
+async function startReview(mode='due'){
   if(guestWallDue()){ renderGuestWall(()=>startReview(mode)); return; }
+  if(currentUnitId === 'custom') await ensureCustomWords();
   document.onkeydown = null;
   session = null;
   const cards = shuffle(reviewPool(mode));
@@ -1753,7 +2434,7 @@ function renderReviewDone(){
       </div>
     </div>`;
   wireBackBtn();
-  $('#quizBtn').onclick = ()=>startQuiz(student.words);
+  $('#quizBtn').onclick = ()=>startQuiz(currentUnitWords());
   $('#againBtn').onclick = ()=>startReview(mode);
   $('#homeBtn').onclick = ()=>renderHome();
 }
@@ -1772,9 +2453,11 @@ function quizPool(list){
 
 /* 오답 보기 고르기 — 의미가 가까운 것부터 단계적으로 뽑는다.
    전체에서 무작위로 뽑으면 품사·주제가 동떨어져 소거법으로 풀리기 때문. */
-function pickDistractors(w, allWords, field, answer, need){
+function pickDistractors(w, allWords, field, answer, need, meaningField){
   const key = s => s.toLowerCase();
   const taken = new Set([key(answer)]);
+  const answerMean = meaningField ? key(w[meaningField] || '') : '';
+  const takenMean = new Set(answerMean ? [answerMean] : []);
   const out = [];
   const rest = allWords.filter(x=>x.wordId!==w.wordId && x[field]);
 
@@ -1793,8 +2476,12 @@ function pickDistractors(w, allWords, field, answer, need){
     // 길이가 가까운 상위 후보군 안에서 무작위 — 매번 똑같은 오답이 나오지 않게
     for(const x of shuffle(nearestByLength(tier).slice(0, Math.max(need*4, 12)))){
       if(out.length >= need) break;
-      if(taken.has(key(x[field]))) continue;   // 정규화 후 뜻이 겹치는 단어는 정답이 2개가 됨
+      if(taken.has(key(x[field]))) continue;   // 선택지에 보이는 값이 겹치면 정답이 2개가 됨
+      // mean2ko: 한국어는 달라도 뜻이 같으면 (것/거 = thing) 정답이 2개가 되거나, 오답끼리도 같은 뜻이 됨
+      const mx = meaningField ? key(x[meaningField] || '') : '';
+      if(mx && takenMean.has(mx)) continue;
       taken.add(key(x[field]));
+      if(mx) takenMean.add(mx);
       out.push(x[field]);
     }
   }
@@ -1810,7 +2497,7 @@ function buildQuestion(w, allWords, nOpt=2){
 
   // 4지선다 = 오답 3개. 후보가 모자라면 있는 만큼만 사용
   // (다른 학생 데이터에서 빌려오지 않음 — 데모/타 학생 콘텐츠 혼입 방지)
-  const distractors = pickDistractors(w, allWords, field, answer, nOpt-1);
+  const distractors = pickDistractors(w, allWords, field, answer, nOpt-1, 'quizMean');
   const options = shuffle([answer, ...distractors]);
   return {w, dir, promptText, answer, options,
           label: dir==="mean2ko" ? L.promptMean : L.promptKo};
@@ -1829,16 +2516,18 @@ function composeSession(sourceWords, size=SESSION_SIZE, nOpt=2){
    🎯 단어 퀴즈 (4지선다)
    ===================================================================== */
 
-function startQuiz(sourceWords){
+async function startQuiz(sourceWords){
   if(guestWallDue()){ renderGuestWall(()=>startQuiz(sourceWords)); return; }
+  if(currentUnitId === 'custom') await ensureCustomWords();
   document.onkeydown = null;
   review = null;
-  // 문장을 뺀 뒤에도 2개 이상 있어야 보기가 성립
-  if(quizPool(student.words).length < 2){ renderNotEnoughWords(); return; }
-  const qs = composeSession(sourceWords, SESSION_SIZE, 4);
+  const pool = sourceWords || currentUnitWords();
+  // 보기는 전체 단어에서 뽑되, 출제 풀은 현재 유닛으로 한정
+  if(quizPool(student.words).length < 2 || quizPool(pool).length < 1){ renderNotEnoughWords(); return; }
+  const qs = composeSession(pool, SESSION_SIZE, 4);
   if(!qs.length){ renderNotEnoughWords(); return; }
   session = { mode:'quiz', qs, i:0, correct:0, streak:0, earned:0, answered:false,
-              source:sourceWords };
+              source:pool };
   renderQuizQuestion();
 }
 
