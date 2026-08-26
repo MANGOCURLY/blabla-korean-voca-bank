@@ -31,7 +31,7 @@ const T = {
     loginTitle: ["Ta banque de", "mots coréens"],
     loginDesc: "Chaque bonne réponse te rapporte des wons. Fais grossir ta banque !",
     google: "Continuer avec Google",
-    demoHint: "Démo interne — même contenu que le mode invité.",
+    demoHint: "Démo interne. Même contenu que le mode invité.",
     hi: "Salut",
     welcome: "Prêt à gagner des wons ?",
     statLearned: "Appris", statKnown: "Mémorisés", statStreak: "Série record",
@@ -42,7 +42,7 @@ const T = {
     knownMenu: "Mots mémorisés & maîtrisés",
     knownSub: "Ta collection",
     todayReview: "à réviser",
-    sectionPlay: "S'entraîner", sectionBrowse: "Parcourir",
+    sectionPlay: "S'entraîner", sectionTest: "Tester", sectionBrowse: "Parcourir",
     promptKo: "Que veut dire…", promptMean: "Comment dit-on…",
     correct: "Bravo !", wrong: "Aïe, ça pique !",
     answerWas: "La bonne réponse :",
@@ -72,6 +72,7 @@ const T = {
     reviewAgain: "🔁 Revoir les cartes",
     reviewEmptyTitle: "Rien à réviser",
     reviewEmptySub: "Aucun mot à réviser pour l'instant. Ajoute des mots ou attends le prochain cours !",
+    reviewEmptyLearned: "Tu n'as pas encore de mot appris. Commence par une unité dans « Apprendre de nouveaux mots ».",
     known: "Mémorisés", master: "Maîtrisés", learning: "En cours",
     emptyKnown: "Pas encore de mot mémorisé. Réponds juste 3 fois de suite à un mot pour le débloquer !",
     navHome:"Accueil", navWords:"Mots", navLearned:"Appris", navKnown:"Mémorisés", navHelp:"Aide",
@@ -99,8 +100,9 @@ const T = {
     copyLink: "Copier le lien",
     copiedMsg: "Lien copié ! Colle-le dans Chrome ou Safari.",
     learnedMenu: "Mots appris",
-    learnedSub: "Tout ce que tu as déjà réussi une fois",
+    learnedSub: "Tous niveaux confondus",
     emptyLearned: "Pas encore de mot appris. Commence l'entraînement pour en débloquer !",
+    emptyStudied: "Tu n'as encore étudié aucun mot. Ouvre une unité pour commencer.",
     addWord: "Ajouter un mot",
     addWordSub: "Ton vocabulaire personnel",
     addWordKoLabel: "Mot en coréen",
@@ -137,11 +139,16 @@ const T = {
     guestName: "Invité",
     guestLoginToSave: "Se connecter et sauvegarder",
     wallTitle: "Fin de la découverte.",
-    wallBody: (n)=>`Tu as appris ${n} mot${n>1?'s':''} — connecte-toi pour les garder et continuer.`,
+    wallBody: (n)=>`Tu as appris ${n} mot${n>1?'s':''}. Connecte-toi pour les garder et continuer.`,
     wallMore: "Explorer encore un peu",
     wallBackToLogin: "Revenir à l'écran de connexion",
     continueStudy: "Continuer",
-    unitSection: "Unités",
+    unitSection: "Apprendre de nouveaux mots",
+    unitLocked: "Verrouillé",
+    unitLockedHint: "Termine 80 % des mots de l'unité précédente pour ouvrir celle-ci.",
+    unitLearnCards: "Apprendre avec les cartes",
+    unitLearnCardsSub: "Sans score, sans stress",
+    unitDoQuiz: "Faire le quiz",
     unitNamed: (n)=>`Unité ${n}`,
     unitCustom: "Mes mots",
     unitUnsorted: "Autres",
@@ -151,20 +158,28 @@ const T = {
     levelC: "Avancé",
     packLoadError: "Impossible de charger le paquet de mots. Vérifie ta connexion et rafraîchis la page.",
     ltSkip: "Passer",
-    ltRetake: "Repasser le test de niveau",
+    ltRetake: "Test de niveau Voca",
     ltRetakeSub: "21 questions · environ 2 min",
     ltYourStart: "Votre point de départ",
     ltUnitLine: (n, letter, name)=>`Unité ${n} · ${letter} ${name}`,
     ltOfCorrect: (c, t)=>`${c} bonnes réponses sur ${t}`,
     ltStartHere: "Commencer ici",
     ltStartOver: "Recommencer depuis le début",
+    feedbackTitle: "Envoyer un avis 💌",
+    feedbackBody: "Voca Bank est 100 % gratuit. Dis-nous ce qui ne va pas, on l'améliorera.",
+    feedbackBtn: "Écrire un e-mail",
+    legalPrivacy: "Politique de confidentialité",
+    legalTerms: "Mentions légales · CGU",
+    siteLink: "blablakorea.fr",
+    hangulTest: "Test de niveau de coréen 🇰🇷",
+    hangulTestSub: "Sur blablakorea.fr. E-mail demandé. Langue réglable au début du test.",
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
     loginTitle: ["Your Korean", "word bank"],
     loginDesc: "Every correct answer earns you won. Grow your bank!",
     google: "Continue with Google",
-    demoHint: "Internal demo — same content as guest mode.",
+    demoHint: "Internal demo. Same content as guest mode.",
     hi: "Hi",
     welcome: "Ready to earn some won?",
     statLearned: "Learned", statKnown: "Memorized", statStreak: "Best streak",
@@ -175,7 +190,7 @@ const T = {
     knownMenu: "Memorized & mastered words",
     knownSub: "Your collection",
     todayReview: "due",
-    sectionPlay: "Practice", sectionBrowse: "Browse",
+    sectionPlay: "Practice", sectionTest: "Test", sectionBrowse: "Browse",
     promptKo: "What does this mean…", promptMean: "How do you say…",
     correct: "Nice!", wrong: "Ouch, spicy!",
     answerWas: "Correct answer:",
@@ -205,14 +220,15 @@ const T = {
     reviewAgain: "🔁 Review again",
     reviewEmptyTitle: "Nothing to review",
     reviewEmptySub: "No words to review right now. Add some words or wait for your next class!",
+    reviewEmptyLearned: "You have no learned words yet. Start with a unit in \"Learn new words\".",
     known: "Memorized", master: "Mastered", learning: "Learning",
     emptyKnown: "No memorized words yet. Answer a word right 3 times in a row to unlock it!",
     navHome:"Home", navWords:"Words", navLearned:"Learned", navKnown:"Memorized", navHelp:"Help",
     helpTitle:"How it works",
     help: [
-      ["🎯","The word quiz","10 questions with 4 choices, no timer. Only words are quizzed — never sentences."],
+      ["🎯","The word quiz","10 questions with 4 choices, no timer. Only words are quizzed, never sentences."],
       ["🃏","Flashcards","The review mode, with no score and no pressure: tap a card to flip the word and see its meaning. Take your time, nothing is counted."],
-      ["💰","The won bank","+100 won per correct answer. A miss costs you nothing — guess without fear."],
+      ["💰","The won bank","+100 won per correct answer. A miss costs you nothing. Guess without fear."],
       ["🔥","Streaks","Chain correct answers to build your streak and watch the chili dance."],
       ["🧠","Memorized words","3 correct in a row = a memorized word. Keep reviewing to master it."],
       ["🧠","Spaced review","Each day we resurface words at the right time: 1, 3, 7, 14, then 30 days."],
@@ -232,8 +248,9 @@ const T = {
     copyLink: "Copy link",
     copiedMsg: "Link copied! Paste it into Chrome or Safari.",
     learnedMenu: "Learned words",
-    learnedSub: "Everything you've gotten right at least once",
+    learnedSub: "All levels together",
     emptyLearned: "No learned words yet. Start practicing to unlock some!",
+    emptyStudied: "You haven't studied any words yet. Open a unit to start.",
     addWord: "Add a word",
     addWordSub: "Your personal vocabulary",
     addWordKoLabel: "Korean word",
@@ -270,11 +287,16 @@ const T = {
     guestName: "Guest",
     guestLoginToSave: "Log in and save",
     wallTitle: "That's the end of the trial.",
-    wallBody: (n)=>`You've learned ${n} word${n===1?'':'s'} so far — log in to save them and keep going.`,
+    wallBody: (n)=>`You've learned ${n} word${n===1?'':'s'} so far. Log in to save them and keep going.`,
     wallMore: "Look around a bit more",
     wallBackToLogin: "Back to the login screen",
     continueStudy: "Continue",
-    unitSection: "Units",
+    unitSection: "Learn new words",
+    unitLocked: "Locked",
+    unitLockedHint: "Learn 80% of the previous unit to unlock this one.",
+    unitLearnCards: "Learn with flashcards",
+    unitLearnCardsSub: "No score, no pressure",
+    unitDoQuiz: "Take the quiz",
     unitNamed: (n)=>`Unit ${n}`,
     unitCustom: "My words",
     unitUnsorted: "Other",
@@ -284,13 +306,21 @@ const T = {
     levelC: "Advanced",
     packLoadError: "Couldn't load the word pack. Check your connection and refresh the page.",
     ltSkip: "Skip",
-    ltRetake: "Retake the level test",
+    ltRetake: "Voca level test",
     ltRetakeSub: "21 questions · about 2 min",
     ltYourStart: "Your starting point",
     ltUnitLine: (n, letter, name)=>`Unit ${n} · ${letter} ${name}`,
     ltOfCorrect: (c, t)=>`${c} of ${t} correct`,
     ltStartHere: "Start here",
     ltStartOver: "Start from the beginning",
+    feedbackTitle: "Send feedback 💌",
+    feedbackBody: "Voca Bank is 100% free. Tell us what's wrong and we'll make it better.",
+    feedbackBtn: "Write an email",
+    legalPrivacy: "Privacy policy",
+    legalTerms: "Legal notice · Terms",
+    siteLink: "blablakorea.fr",
+    hangulTest: "Korean level test 🇰🇷",
+    hangulTestSub: "On blablakorea.fr. Email required. Language switch at the start.",
   }
 };
 
@@ -378,6 +408,14 @@ let currentPackLevel = null; // 오픈/게스트의 A/B/C. 시트 학생은 null
 let currentUnitId = null;    // 지금 학습 중인 유닛
 let studentProg = { cur: null, u: {}, lvl: null };  // students.prog (홈은 유닛 문서를 안 읽는다)
 let loadedUnits = new Set();
+let learnedCache = null;      // null = 아직 안 만듦. 세션당 1회. student.words 에 합치지 않는다
+let learnedCacheEpoch = 0;
+let learnedCacheInflight = null;
+function dropLearnedCache(){
+  learnedCache = null;
+  learnedCacheEpoch++;
+  learnedCacheInflight = null;
+}
 let customWordsLoaded = false;
 let pendingUnits = new Set(); // 저널에 쌓인 유닛 (세션 종료 시 1문서씩 커밋)
 let showPron = false;        // 발음 표시 토글 (세션 전체 공용, 문제별 개별 아님)
@@ -392,6 +430,12 @@ let levelTestCache = null;
    틀린 문항은 돈 대신 세션 끝 재출제 1회로 되갚는다 (§3.4-1). */
 const REWARD = 100, KNOWN_STREAK = 3;
 const UNIT_PASS = 0.8;       // 아는 단어 비율이 이 이상이면 유닛 통과 표시
+
+/* 배포 후 실제 URL 로 바꾼다. 비어 있으면 링크를 아예 그리지 않는다 */
+const LEGAL_URL = {
+  fr: { privacy: 'legal/confidentialite.html', terms: 'legal/mentions-cgu.html' },
+  en: { privacy: 'legal/privacy.html',         terms: 'legal/legal-terms.html'  },
+};
 
 /* ---------- 학생 초대 (Firestore invites) ----------
    공개 구글시트 학생목록 CSV는 폐기했다. 인증 없이 열리는 URL 하나에
@@ -739,6 +783,7 @@ async function startGuest(){
   currentUserEmail = null; currentUid = null; currentPackId = null;
   pendingUnits = new Set();
   loadedUnits = new Set();
+  dropLearnedCache();
   customWordsLoaded = false;
   progressLocked = true;          // 저장 경로 전체 잠금
   guestReset();
@@ -763,6 +808,7 @@ async function startGuest(){
 
 function exitGuest(){
   isGuest = false;
+  dropLearnedCache();
   student = null; session = null; review = null; levelTest = null;
   bank = 0; bestStreak = 0;
   document.onkeydown = null;
@@ -873,6 +919,36 @@ function knownCountForUnit(unitId){
 function unitPassed(unitId){
   const total = unitTotal(unitId);
   return total > 0 && knownCountForUnit(unitId) / total >= UNIT_PASS;
+}
+
+/* 정렬된 유닛 id (custom 제외). 해금 계산의 기준 순서다 */
+function orderedUnitIds(){
+  return listUnitIds().filter(id => id !== 'custom');
+}
+
+/* 앞에서부터 몇 개 유닛이 열려 있는가.
+   - 첫 유닛은 항상 열린다
+   - 통과한(80%) 유닛의 다음 유닛이 열린다
+   - 레벨 테스트 배치 유닛(studentProg.cur)과, 이미 진도가 있는 유닛은
+     그보다 앞이면 무조건 열어 준다 (기존 사용자가 잠기면 안 된다)
+   - 시트 사용자(날짜별 유닛)는 순차 개념이 없으므로 전부 열린다 */
+function unlockedCount(){
+  const ids = orderedUnitIds();
+  if(isSheetUser()) return ids.length;
+  let n = 1;
+  ids.forEach((id, i)=>{
+    const hasProgress = !!(studentProg.u && studentProg.u[id] > 0);
+    if(id === studentProg.cur || hasProgress) n = Math.max(n, i + 1);
+    if(unitPassed(id)) n = Math.max(n, i + 2);
+  });
+  return Math.min(n, ids.length);
+}
+
+function unitUnlocked(unitId){
+  if(unitId === 'custom') return true;
+  const ids = orderedUnitIds();
+  const i = ids.indexOf(unitId);
+  return i >= 0 && i < unlockedCount();
 }
 
 function unitTitle(id){
@@ -1026,11 +1102,11 @@ async function loadUnit(unitId){
   });
 }
 
-async function selectUnit(unitId){
+async function selectUnit(unitId, render=true){
   currentUnitId = unitId;
   studentProg.cur = unitId;
   await loadUnit(unitId);
-  renderHome();
+  if(render) renderHome();
 }
 
 /* =====================================================================
@@ -1401,6 +1477,7 @@ async function handleLoginSuccess(user){
   currentPackId = invite.packId || null;
   pendingUnits = new Set();
   loadedUnits = new Set();
+  dropLearnedCache();
   customWordsLoaded = false;
   studentProg = { cur: null, u: {}, lvl: null };
   currentUnitId = null;
@@ -1467,6 +1544,7 @@ async function doLogout(){
   currentUnitId = null;
   studentProg = { cur: null, u: {}, lvl: null };
   loadedUnits = new Set();
+  dropLearnedCache();
   customWordsLoaded = false;
   pendingUnits = new Set();
   studentDocExists = false;
@@ -1508,7 +1586,7 @@ function initApp(){
     });
     else { currentUserEmail = null; currentUid = null; currentPackId = null; currentPackLevel = null;
            currentUnitId = null; studentProg = { cur: null, u: {}, lvl: null };
-           loadedUnits = new Set(); customWordsLoaded = false; pendingUnits = new Set();
+           loadedUnits = new Set(); dropLearnedCache(); customWordsLoaded = false; pendingUnits = new Set();
            isGuest = false; guestReset(); renderLogin(); }
   });
 }
@@ -1571,6 +1649,19 @@ async function signInWithGoogle(Lx){
   }
 }
 
+function loginLegalNoticeHtml(){
+  const fr = loginLang === 'fr';
+  const href = fr ? LEGAL_URL.fr.privacy : LEGAL_URL.en.privacy;
+  const label = fr ? 'Politique de confidentialité' : 'Privacy policy';
+  const link = href
+    ? ` <a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`
+    : '';
+  const text = fr
+    ? "En vous connectant avec Google, nous enregistrons votre nom d’affichage et vos progrès de vocabulaire chez Firebase (Google). Pas de publicité, pas de mesure d’audience."
+    : "By signing in with Google, we store your display name and vocabulary progress in Firebase (Google). No ads, no analytics.";
+  return `<p class="guest-hint" id="loginLegal">${escapeHtml(text)}${link}</p>`;
+}
+
 function renderLogin(){
   botnav.classList.add('hidden');
   const showDemo = new URLSearchParams(location.search).get('demo')==='true';
@@ -1596,6 +1687,7 @@ function renderLogin(){
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.3 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.9 6.1C12.3 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.4 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.3 0 11.6-2.1 15.5-5.6l-7.1-5.5c-2 1.3-4.5 2.1-8.4 2.1-6.4 0-11.7-3.7-13.6-9.4l-7.9 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
       ${Lx.google}
     </button>
+    ${loginLegalNoticeHtml()}
     `}
     <button class="btn secondary guest-btn" id="guestBtn">${Lx.guestBtn}</button>
     <div class="guest-hint">${Lx.guestNoSave}</div>
@@ -1684,7 +1776,7 @@ function renderPackLoadError(lang, fromGuest){
     isGuest = false;
     currentUserEmail = null; currentUid = null; currentPackId = null; currentPackLevel = null;
     currentUnitId = null; studentProg = { cur: null, u: {}, lvl: null };
-    loadedUnits = new Set(); customWordsLoaded = false; pendingUnits = new Set();
+    loadedUnits = new Set(); dropLearnedCache(); customWordsLoaded = false; pendingUnits = new Set();
     if(fromGuest){ renderLogin(); return; }
     try{ await window.fb.signOut(window.fb.auth); }
     catch(e){ console.error(e); renderLogin(); }
@@ -1706,18 +1798,79 @@ function renderVocabNotReady(lang){
   $('#vocabLogoutBtn').onclick = async ()=>{
     currentUserEmail = null; currentUid = null; currentPackId = null; currentPackLevel = null;
     currentUnitId = null; studentProg = { cur: null, u: {}, lvl: null };
-    loadedUnits = new Set(); customWordsLoaded = false; pendingUnits = new Set();
+    loadedUnits = new Set(); dropLearnedCache(); customWordsLoaded = false; pendingUnits = new Set();
     try{ await window.fb.signOut(window.fb.auth); }   // onAuthStateChanged → renderLogin()
     catch(e){ console.error(e); renderLogin(); }
   };
 }
 
-/* ---------- 오늘 복습 예정 개수 (SRS 데모) ---------- */
-function dueCount(){
-  return currentUnitWords().filter(w=>wordStatus(w)!=="master" && w.type!=="sentence").length;
+/* 레벨 A·B·C 를 가로지르는 「배운 단어」 목록.
+   팩 JSON 은 정적 파일이라 몇 개를 읽든 Firestore 비용이 0이다.
+   Firestore 는 studentProg.u 에 이름이 올라온 유닛만 읽는다 —
+   학생이 실제로 손댄 유닛 수만큼이므로 읽기 수가 유닛 전체로 불어나지 않는다.
+   loadedUnits / student.words / studentProg 는 건드리지 않는다 (F1 해금 입력). */
+async function buildLearnedCache(){
+  if(learnedCache) return learnedCache;
+  if(learnedCacheInflight) return learnedCacheInflight;
+  const epoch = learnedCacheEpoch;
+  const inflight = (async ()=>{
+    const current = (student && student.words || []).filter(w => (w.gradedCorrect||0) > 0);
+    if(isSheetUser() || !currentUid || progressLocked){
+      if(epoch === learnedCacheEpoch) learnedCache = current;
+      return current;
+    }
+    const curLv = normalizePackLevel(currentPackLevel);
+    const lang = (student && student.lang) || 'en';
+    const extra = [];
+    const seen = new Set(current.map(w => w.wordId));
+    for(const lv of ['A','B','C']){
+      if(lv === curLv) continue;
+      const prefix = 'ko-' + lv + '-';
+      const unitIds = Object.keys(studentProg.u || {}).filter(id => String(id).startsWith(prefix));
+      if(!unitIds.length) continue;          // 이 레벨은 쓴 적이 없다. 팩을 받지 않는다
+      let packWords;
+      try{
+        packWords = await wordsFromPack(lv, lang);
+      }catch(e){
+        console.error('learned 팩 로딩 실패:', e);
+        continue;
+      }
+      for(const id of unitIds){
+        try{
+          const snap = await D().getDoc(unitRef(id));
+          if(!snap.exists()) continue;
+          const data = snap.data() || {};
+          const p = data.p || {};
+          const mastered = new Set(Array.isArray(data.m) ? data.m : []);
+          packWords.forEach(w=>{
+            if(unitIdForWord(w) !== id) return;
+            if(p[w.wordId] !== undefined) applyCard(w, p[w.wordId]);
+            if(mastered.has(w.wordId) && !w.masteredAt) w.masteredAt = true;
+          });
+        }catch(e){
+          console.error('learned 유닛 읽기 실패:', id, e);
+        }
+      }
+      packWords.forEach(w=>{
+        if((w.gradedCorrect||0) > 0 && !seen.has(w.wordId)){
+          seen.add(w.wordId);
+          extra.push(w);
+        }
+      });
+    }
+    const list = current.concat(extra);
+    if(epoch === learnedCacheEpoch) learnedCache = list;
+    return list;
+  })();
+  learnedCacheInflight = inflight;
+  try{ return await inflight; }
+  finally{ if(learnedCacheInflight === inflight) learnedCacheInflight = null; }
 }
+
 function stats(){
-  const learned = student.words.filter(w=>(w.gradedCorrect||0)>0).length;
+  const learned = learnedCache
+    ? learnedCache.length
+    : student.words.filter(w=>(w.gradedCorrect||0)>0).length;
   const known = listUnitIds().reduce((n, id) => n + knownCountForUnit(id), 0);
   return {learned, known};
 }
@@ -1738,14 +1891,21 @@ function unitListHtml(){
   const cur = currentUnitId || ids[0];
   if(!cur) return '';
   const row = (id, accent)=>{
+    const locked = !unitUnlocked(id);
     const total = unitTotal(id);
     const known = knownCountForUnit(id);
-    const check = unitPassed(id) ? ' ✓' : '';
-    const emoji = id === 'custom' ? '📝' : (id === cur ? '📌' : '📗');
-    return `<button class="menu-btn" data-unit="${escapeHtml(id)}" ${accent ? 'style="border-color:var(--accent)"' : ''}>
+    const check = !locked && unitPassed(id) ? ' ✓' : '';
+    const emoji = locked ? '🔒' : (id === 'custom' ? '📝' : (id === cur ? '📌' : '📗'));
+    const sub = locked ? L.unitLocked : `${known}/${total}${id===cur ? ' · ' + L.continueStudy : ''}`;
+    const dataAttr = locked ? `data-locked="${escapeHtml(id)}"` : `data-unit="${escapeHtml(id)}"`;
+    const styles = [];
+    if(locked) styles.push('opacity:.55','cursor:default');
+    if(accent && !locked) styles.push('border-color:var(--accent)');
+    const styleAttr = styles.length ? ` style="${styles.join(';')}"` : '';
+    return `<button class="menu-btn" ${dataAttr}${styleAttr}>
       <span class="emoji">${emoji}</span>
       <span class="mtext"><b>${escapeHtml(unitTitle(id))}${check}</b>
-        <span>${known}/${total}${id===cur ? ' · ' + L.continueStudy : ''}</span></span>
+        <span>${sub}</span></span>
       <span class="arrow">→</span>
     </button>`;
   };
@@ -1753,6 +1913,37 @@ function unitListHtml(){
   return `<div class="section-title">${L.unitSection}</div>` +
     row(cur, true) +
     rest.map(id => row(id, false)).join('');
+}
+
+function feedbackMailto(){
+  const lang = (L === T.fr) ? 'fr' : 'en';
+  const subject = '[Voca Bank] Feedback';
+  const body = 'Language: ' + lang + '\nVersion: web\n\n';
+  return 'mailto:contact.blablakorea@gmail.com?subject=' +
+    encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+
+function homeFooterHtml(){
+  const lang = (L === T.fr) ? 'fr' : 'en';
+  const site = (L === T.en) ? 'https://en.blablakorea.fr/about' : 'https://www.blablakorea.fr/';
+  const pack = LEGAL_URL[lang] || { privacy: '', terms: '' };
+  const links = [];
+  if(pack.privacy){
+    links.push(`<a href="${escapeHtml(pack.privacy)}" target="_blank" rel="noopener noreferrer">${escapeHtml(L.legalPrivacy)}</a>`);
+  }
+  if(pack.terms){
+    links.push(`<a href="${escapeHtml(pack.terms)}" target="_blank" rel="noopener noreferrer">${escapeHtml(L.legalTerms)}</a>`);
+  }
+  return `<div style="text-align:center;margin:28px 2px 12px;padding-top:20px;border-top:1px solid var(--border)">
+    <div style="font-weight:700;color:var(--accent-strong)">${escapeHtml(L.feedbackTitle)}</div>
+    <div style="color:var(--text-muted);font-size:.85rem;line-height:1.5;margin:8px 14px 14px">${escapeHtml(L.feedbackBody)}</div>
+    <a class="btn" id="feedbackMail" style="display:block;text-decoration:none;text-align:center" href="${feedbackMailto()}">${escapeHtml(L.feedbackBtn)}</a>
+    ${links.length ? `<div style="margin-top:18px;font-size:.82rem;line-height:1.8">${links.join('<br>')}</div>` : ''}
+    <div style="margin-top:14px;font-size:.82rem">
+      <a href="${escapeHtml(site)}" target="_blank" rel="noopener noreferrer" id="siteLink">${escapeHtml(L.siteLink)}</a>
+    </div>
+    <div style="color:var(--text-muted);font-size:.72rem;margin-top:12px;line-height:1.7">© 2026 Jonghyuk Lee · Blabla Korea</div>
+  </div>`;
 }
 
 /* ---------- 홈 ---------- */
@@ -1786,15 +1977,17 @@ function renderHome(){
     ${unitListHtml()}
 
     <div class="section-title">${L.sectionPlay}</div>
-    <button class="menu-btn" id="quizBtn" style="border-color:var(--accent)">
-      <span class="emoji">🎯</span>
-      <span class="mtext"><b>${L.quiz}</b><span>${L.quizSub}</span></span>
-      <span class="arrow">→</span>
-    </button>
     <button class="menu-btn" id="reviewBtn">
       <span class="emoji">🃏</span>
       <span class="mtext"><b>${L.review}</b><span>${L.reviewSub}</span></span>
-      <span class="badge">${dueCount()} ${L.todayReview}</span>
+      <span class="arrow">→</span>
+    </button>
+
+    <div class="section-title">${L.sectionTest}</div>
+    <button class="menu-btn" id="quizBtn">
+      <span class="emoji">🎯</span>
+      <span class="mtext"><b>${L.quiz}</b><span>${L.quizSub}</span></span>
+      <span class="arrow">→</span>
     </button>
     ${!isSheetUser() ? `
     <button class="menu-btn" id="levelTestBtn">
@@ -1802,6 +1995,11 @@ function renderHome(){
       <span class="mtext"><b>${L.ltRetake}</b><span>${L.ltRetakeSub}</span></span>
       <span class="arrow">→</span>
     </button>` : ''}
+    <a class="menu-btn" id="hangulTestLink" href="${escapeHtml(L===T.fr ? 'https://www.blablakorea.fr/test-coreen' : 'https://en.blablakorea.fr/test-coreen')}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">
+      <span class="emoji">🇰🇷</span>
+      <span class="mtext"><b>${L.hangulTest}</b><span>${L.hangulTestSub}</span></span>
+      <span class="arrow">→</span>
+    </a>
 
     <div class="section-title">${L.sectionBrowse}</div>
     <button class="menu-btn" id="wordsBtn">
@@ -1825,9 +2023,10 @@ function renderHome(){
       <span class="mtext"><b>${L.addWord}</b><span>${L.addWordSub}</span></span>
       <span class="arrow">→</span>
     </button>`}
+    ${homeFooterHtml()}
   `;
   $('#quizBtn').onclick = ()=>startQuiz(currentUnitWords());
-  $('#reviewBtn').onclick = ()=>startReview('due');
+  $('#reviewBtn').onclick = ()=>startReview('learned');
   const ltBtn = $('#levelTestBtn');
   if(ltBtn) ltBtn.onclick = ()=>startLevelTest();
   $('#wordsBtn').onclick = ()=>renderWords();
@@ -1840,30 +2039,88 @@ function renderHome(){
   }
   $('#statLearned').onclick = renderLearned;
   $('#statKnown').onclick = renderKnown;
+  if(!learnedCache && !isSheetUser()){
+    buildLearnedCache().then(list=>{
+      const el = $('#statLearned b');
+      if(el) el.textContent = String(list.length);
+    }).catch(e=>console.error(e));
+  }
   app.querySelectorAll('[data-unit]').forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = btn.dataset.unit;
-      if(id === currentUnitId) startQuiz(currentUnitWords());
-      else selectUnit(id);
-    };
+    btn.onclick = ()=>renderUnit(btn.dataset.unit);
+  });
+  app.querySelectorAll('[data-locked]').forEach(btn=>{
+    btn.onclick = ()=>alert(L.unitLockedHint);
   });
   app.querySelectorAll('[data-lvl]').forEach(btn=>{
     btn.onclick = ()=>switchPackLevel(btn.dataset.lvl);
   });
 }
 
+async function renderUnit(unitId){
+  if(!unitUnlocked(unitId)){
+    alert(L.unitLockedHint);
+    return;
+  }
+  botnav.classList.remove('hidden');
+  document.onkeydown = null;
+  review = null;
+  setNav('home');
+  await selectUnit(unitId, false);
+  const total = unitTotal(unitId);
+  const known = knownCountForUnit(unitId);
+  app.innerHTML = backBtn() + topbar() + `
+    <div class="hello">
+      <img src="${IMG.study}" alt="" style="width:70px">
+      <div>
+        <h2>📗 ${escapeHtml(unitTitle(unitId))}</h2>
+        <div class="sub">${known} / ${total} ${L.statKnown}</div>
+      </div>
+    </div>
+    <button class="menu-btn" id="unitCardsBtn">
+      <span class="emoji">🃏</span>
+      <span class="mtext"><b>${L.unitLearnCards}</b><span>${L.unitLearnCardsSub}</span></span>
+      <span class="arrow">→</span>
+    </button>
+    <button class="menu-btn" id="unitQuizBtn">
+      <span class="emoji">🎯</span>
+      <span class="mtext"><b>${L.unitDoQuiz}</b><span>${L.quizSub}</span></span>
+      <span class="arrow">→</span>
+    </button>
+  `;
+  wireBackBtn();
+  $('#unitCardsBtn').onclick = ()=>startReview('unit');
+  $('#unitQuizBtn').onclick = ()=>startQuiz(currentUnitWords());
+}
+
 /* ---------- 날짜별 단어 ---------- */
-function renderWords(selectedDate = "all"){
+/* 학습 흔적이 있는 단어 — 채점됐거나(reps) 카드로 봤거나(views) 맞힌 적(gradedCorrect) 있는 것 */
+function isStudied(w){
+  return (w.reps|0) > 0 || (w.views|0) > 0 || (w.gradedCorrect|0) > 0;
+}
+
+async function renderWords(selectedDate = "all"){
   botnav.classList.remove('hidden');
   setNav('words');
   if(!isSheetUser()){
-    const units = listUnitIds();
+    await buildLearnedCache();
+    const units = listUnitIds().filter(id => {
+      if(id === 'custom') return wordsInUnit(id).length > 0;
+      return wordsInUnit(id).some(isStudied);
+    });
     const byUnit = {};
-    units.forEach(id => { byUnit[id] = wordsInUnit(id); });
-    const shown = selectedDate === 'all' ? units : units.filter(id => id === selectedDate);
+    units.forEach(id => { byUnit[id] = wordsInUnit(id).filter(isStudied); });
     let html = backBtn() + topbar() + `<h2 style="margin:6px 2px 4px">📖 ${L.words}</h2>
-      <div class="sub" style="color:var(--text-muted);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>
-      <select id="dateFilter" style="width:100%;margin:10px 0 2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;font-size:1rem;color:var(--text);font-family:inherit;cursor:pointer">
+      <div class="sub" style="color:var(--text-muted);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>`;
+    if(!units.length){
+      html += `<div class="card" style="text-align:center;color:var(--text-muted)">
+        <img src="${IMG.grumpy}" style="width:120px;margin-bottom:10px" alt="">
+        <p>${L.emptyStudied}</p></div>`;
+      app.innerHTML = html;
+      wireBackBtn();
+      return;
+    }
+    const shown = selectedDate === 'all' ? units : units.filter(id => id === selectedDate);
+    html += `<select id="dateFilter" style="width:100%;margin:10px 0 2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;font-size:1rem;color:var(--text);font-family:inherit;cursor:pointer">
         <option value="all">📅 ${L.allDates}</option>
         ${units.map(id=>`<option value="${escapeHtml(id)}" ${id===selectedDate?'selected':''}>${escapeHtml(unitTitle(id))} · ${byUnit[id].length}</option>`).join('')}
       </select>`;
@@ -1922,7 +2179,13 @@ function fmtDate(d){
 }
 
 /* ---------- 단어 행 렌더 (공통) + 삭제 ---------- */
-function wordRowHtml(w, controls=false){
+function wordLevelBadge(w){
+  if(w.source === 'custom') return L.tagCustom;
+  const m = String(unitIdForWord(w)).match(/^ko-([ABC])-/);
+  return m ? m[1] : '';
+}
+
+function wordRowHtml(w, controls=false, withLevel){
   const del = (w.source==='custom')
     ? `<button class="word-del" data-del="${escapeHtml(w.wordId)}" title="${L.deleteWord}">✕</button>`
     : '';
@@ -1939,11 +2202,14 @@ function wordRowHtml(w, controls=false){
   // 색은 고정 팔레트 값만 허용한다. 이스케이프만으로는 style 속성 안의 CSS 주입을 못 막는다
   const safeColor = WORD_COLORS.includes(w.color) ? w.color : '';
   const colorStyle = safeColor ? ` style="border-left:4px solid ${safeColor}"` : '';
+  const level = withLevel ? wordLevelBadge(w) : '';
+  const levelTag = level ? `<span class="tag custom">${escapeHtml(level)}</span>` : '';
+  const customTag = (!withLevel && w.source==='custom') ? `<span class="tag custom">${L.tagCustom}</span>` : '';
   return `<div class="word-row"${colorStyle}>
     ${move}
     <span class="ko kr">${escapeHtml(w.ko)}</span>
     <span class="mean">${escapeHtml(w.mean)}</span>
-    ${w.source==='custom' ? `<span class="tag custom">${L.tagCustom}</span>` : ''}
+    ${levelTag}${customTag}
     <span class="tag ${statusTag(w).cls}">${statusTag(w).txt}</span>
     ${edit}${del}
   </div>`;
@@ -1992,10 +2258,10 @@ function renderKnown(){
 }
 
 /* ---------- 배운 단어 (한 번이라도 맞춘 단어) ---------- */
-function renderLearned(){
+async function renderLearned(){
   botnav.classList.remove('hidden');
   setNav('learned');
-  const learned = student.words.filter(w=>(w.gradedCorrect||0)>0);
+  const learned = await buildLearnedCache();
   let html = backBtn() + topbar() + `<div class="hello">
       <img src="${IMG.excited}" alt="" style="width:70px">
       <div><h2>✅ ${L.learnedMenu}</h2>
@@ -2006,7 +2272,7 @@ function renderLearned(){
       <p>${L.emptyLearned}</p></div>`;
   } else {
     learned.forEach(w=>{
-      html += wordRowHtml(w);
+      html += wordRowHtml(w, false, true);
     });
   }
   app.innerHTML = html;
@@ -2281,7 +2547,7 @@ function renderHelp(){
     ? `<button class="btn" id="logoutBtn" style="margin-top:10px">🔐 ${L.guestLoginToSave}</button>`
     : `<button class="btn chili" id="logoutBtn" style="margin-top:10px">🚪 ${L.logout}</button>`;
   html += `<div style="text-align:center;color:var(--text-muted);font-size:.72rem;margin-top:22px;line-height:1.7">
-    © 2026 Blabla Korea · Jonghyuk Lee<br>${L.rightsNote}</div>`;
+    © 2026 Jonghyuk Lee · Blabla Korea<br>${L.rightsNote}</div>`;
   app.innerHTML = html;
   wireBackBtn();
   $('#switchLang').onclick = ()=>{ L = (L===T.fr)?T.en:T.fr; renderHelp(); };
@@ -2295,20 +2561,22 @@ function renderHelp(){
    ===================================================================== */
 
 function reviewPool(mode){
-  // 플래시카드는 현재 유닛에서만. 퀴즈에 안 나오는 문법 규칙·설명형 단어도 카드로는 보여준다
-  const words = currentUnitWords().filter(w=>w.type!=="sentence" && w.ko && w.mean);
-  if(mode==='all') return words;
-  const due = words.filter(w=>wordStatus(w)!=="master");
-  return due.length ? due : words;   // 전부 마스터면 그냥 전체 보여주기
+  if(mode === 'unit'){
+    // 유닛 학습용 — 진도와 무관하게 그 유닛 전체를 보여준다
+    return currentUnitWords().filter(w=>w.type!=="sentence" && w.ko && w.mean);
+  }
+  // 'learned' — 한 번이라도 맞힌 단어만 복습한다
+  return (student.words || []).filter(w =>
+    (w.gradedCorrect||0) > 0 && w.type!=="sentence" && w.ko && w.mean);
 }
 
-async function startReview(mode='due'){
+async function startReview(mode='learned'){
   if(guestWallDue()){ renderGuestWall(()=>startReview(mode)); return; }
   if(currentUnitId === 'custom') await ensureCustomWords();
   document.onkeydown = null;
   session = null;
   const cards = shuffle(reviewPool(mode));
-  if(!cards.length){ renderReviewEmpty(); return; }
+  if(!cards.length){ renderReviewEmpty(mode); return; }
   review = { cards, i:0, flipped:false, mode, seen:new Set([0]), viewed:new Set() };
   renderReview();
 }
@@ -2323,14 +2591,15 @@ function countCardView(w){
   journalCard(w);          // 게스트·데모는 currentUid가 없어 저장되지 않는다
 }
 
-function renderReviewEmpty(){
+function renderReviewEmpty(mode){
   botnav.classList.add('hidden');
   review = null;
+  const sub = mode === 'learned' ? L.reviewEmptyLearned : L.reviewEmptySub;
   app.innerHTML = backBtn() + topbar() + `
     <div class="result">
       <img src="${IMG.surprised}" alt="">
       <h2>${L.reviewEmptyTitle}</h2>
-      <div class="score" style="max-width:380px;margin:0 auto 18px">${L.reviewEmptySub}</div>
+      <div class="score" style="max-width:380px;margin:0 auto 18px">${sub}</div>
       <div class="btn-row" style="flex-direction:column">
         ${isGuest ? '' : `<button class="btn" id="addNowBtn">➕ ${L.addWord}</button>`}
         <button class="btn secondary" id="homeBtn">${L.home}</button>
@@ -2419,7 +2688,7 @@ function renderReviewDone(){
   commitJournal();               // 세션 전체의 views 를 writeBatch 1회로 커밋
   guestCountSession();
   const total = review ? review.cards.length : 0;
-  const mode = review ? review.mode : 'due';
+  const mode = review ? review.mode : 'learned';
   review = null;
   app.innerHTML = backBtn() + topbar() + `
     <div class="result">
@@ -2634,6 +2903,7 @@ function quizAnswer(btn, chosen, q){
   if(!w.firstSeenAt) w.firstSeenAt = now;
   if(correct){
     session.correct++; session.streak++; session.earned += REWARD;
+    if((w.gradedCorrect||0) === 0) dropLearnedCache();
     w.correctStreak++; w.gradedCorrect++;
     if(w.correctStreak >= 6 && !w.masteredAt) w.masteredAt = now;
     bestStreak = Math.max(bestStreak, session.streak);
@@ -2788,5 +3058,5 @@ else {
   window.addEventListener('fb-ready', initApp);
   window.addEventListener('fb-failed', e=>renderBootError(e.detail));
   // firebase-init.js 가 아예 로드조차 못 되면 두 이벤트 다 오지 않는다
-  setTimeout(()=>{ if(!window.fb) renderBootError('firebase-init.js — 응답 없음'); }, 8000);
+  setTimeout(()=>{ if(!window.fb) renderBootError('firebase-init.js: 응답 없음'); }, 8000);
 }

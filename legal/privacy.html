@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'self'; form-action 'none'">
+<title>Privacy policy — Blabla Korea · Voca Bank</title>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:#F5ECE9;color:#39343D;
+  line-height:1.7;padding:24px 18px 48px;
+}
+.wrap{max-width:720px;margin:0 auto}
+.nav{font-size:.9rem;margin:0 0 22px;padding-bottom:14px;border-bottom:1px solid #DAD7DB}
+.nav a{color:#A25379}
+h1,h2,h3,h4{color:#3D0022;line-height:1.3}
+h1{font-size:1.6rem;margin:0 0 12px}
+h2{font-size:1.2rem;margin:28px 0 10px}
+h3{font-size:1.05rem;margin:22px 0 8px}
+p{margin:0 0 12px}
+a{color:#A25379}
+hr{border:0;border-top:1px solid #DAD7DB;margin:24px 0}
+ul,ol{margin:0 0 12px;padding-left:1.3rem}
+li{margin:0 0 4px}
+blockquote{margin:12px 0;padding:10px 14px;border-left:3px solid #A25379;background:#F7F2EC}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0 16px;border:1px solid #DAD7DB;border-radius:8px;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{border-bottom:1px solid #DAD7DB;padding:8px 10px;text-align:left;vertical-align:top}
+th{background:#F3F1F2;color:#3D0022}
+tr:last-child td{border-bottom:0}
+.foot{margin-top:36px;padding-top:16px;border-top:1px solid #DAD7DB;font-size:.78rem;color:#39343D;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="nav">
+  <a href="confidentialite.html">Français</a>
+  ·
+  <a href="../index.html">Back to Voca Bank</a>
+</nav>
+<h1>Privacy policy</h1>
+<p><strong>Blabla Korea · Voca Bank</strong><br>Last updated: 26 August 2026</p>
+<p><strong>The French text is the authoritative version.</strong> This is a translation, written in plain English. If the two differ, the French version prevails. French version: <strong>https://mangocurly.github.io/blabla-korean-voca-bank/legal/confidentialite.html</strong>.</p>
+<p>This policy describes the <strong>Blabla Korea · Voca Bank</strong> Korean vocabulary web app (the “service”) at <a href="https://mangocurly.github.io/blabla-korean-voca-bank/" rel="noopener noreferrer">https://mangocurly.github.io/blabla-korean-voca-bank/</a>. It reflects how the service actually works on the date above.</p>
+<hr>
+<h2>In short</h2>
+<ul><li>The service is <strong>free</strong>. No payments, no ads, no working audience-measurement.</li><li>You can try it <strong>without an account</strong>. Then nothing is sent to our systems; it stays in your browser.</li><li>Accounts use <strong>Google sign-in only</strong>. We do not issue our own passwords.</li><li>If you sign in, your vocabulary progress is stored with <strong>Google (Firebase)</strong>, including in the <strong>United States</strong>.</li><li>We do <strong>not</strong> set advertising cookies. There is no consent banner; see section 8.</li><li>To access, correct or delete your data: contact.blablakorea@gmail.com.</li></ul>
+<hr>
+<h2>1. Who is the controller?</h2>
+<p>The <strong>controller</strong> (the person who decides why and how your data are used) is:</p>
+<ul><li><strong>Name:</strong> Jonghyuk LEE</li><li><strong>Status:</strong> auto-entrepreneur (sole trader), France</li><li><strong>SIRET:</strong> 10728631200015</li><li><strong>Postal contact:</strong> provided on written request to the e-mail address below.</li><li><strong>E-mail (privacy):</strong> contact.blablakorea@gmail.com</li></ul>
+<p>No data protection officer (DPO) has been appointed.</p>
+<hr>
+<h2>2. Who the service is for</h2>
+<p>Blabla Korea · Voca Bank is a <strong>free</strong> web app for learning Korean vocabulary. There is no shop, no public community feed, and no messaging between users.</p>
+<p>Three ways to use it:</p>
+<div class="table-wrap"><table><thead><tr><th></th><th>Account</th><th>What is stored on our side (Firebase)</th></tr></thead><tbody><tr><td><strong>Guest trial</strong></td><td>No</td><td><strong>Nothing.</strong> The app runs only in the browser.</td></tr><tr><td><strong>User with a Google account</strong></td><td>Yes</td><td>Account id, display name, interface language, scores and progress, words you add yourself.</td></tr><tr><td><strong>Enrolled student</strong></td><td>Yes, plus a pre-created invitation</td><td>The same, plus the URL of the class vocabulary spreadsheet.</td></tr></tbody></table></div>
+<p>“On our side” means <strong>Firebase Authentication</strong> and <strong>Cloud Firestore</strong> (Google). The browser talks to Google directly. <strong>We do not run our own server.</strong> The site files are hosted on <strong>GitHub Pages</strong>.</p>
+<hr>
+<h2>3. What we process, why, and on what legal basis</h2>
+<p>GDPR requires a <strong>legal basis</strong> for each use. The list below is what the service actually stores.</p>
+<p>We do <strong>not</strong> rely on <strong>consent</strong> (GDPR art. 6.1.a) to run the service. Consent would be for optional extras we do not offer (ads, non-exempt analytics).</p>
+<h3>3.1. Guest trial (no account)</h3>
+<p>Nothing is sent to Firebase or to a server we control.</p>
+<p>In your browser only:</p>
+<ul><li>interface <strong>language</strong> (<code>localStorage</code>);</li><li>a <strong>guest-trial counter</strong>, cleared when you close the tab (<code>sessionStorage</code>);</li><li><strong>progress not yet sent</strong>, if you play and later sign in (<code>localStorage</code>).</li></ul>
+<p><strong>Basis (device storage):</strong> exemption under Article 82 of the French Data Protection Act — storage <strong>strictly necessary</strong> for the service you asked for. See section 8.</p>
+<h3>3.2. Google account and profile</h3>
+<p>When you click “Sign in with Google”:</p>
+<ol><li>Google opens its own sign-in screen. For <strong>your Google Account</strong>, Google is a separate controller. Policy: <a href="https://policies.google.com/privacy" rel="noopener noreferrer">https://policies.google.com/privacy</a>.</li><li>If you agree, Firebase Authentication creates a session. We receive:</li><li>a technical <strong><code>uid</code></strong> (the key of your file);</li><li>the <strong>display name</strong> (<code>displayName</code>) from your Google profile.</li></ol>
+<p>We do <strong>not</strong> write your e-mail in plain text into Firestore. To match a student invitation, the app computes a <strong>SHA-256 hash</strong> of the e-mail (trimmed, lowercased) <strong>in memory</strong>, compares it, then discards the e-mail.</p>
+<p>Firebase Authentication still keeps the Google sign-in identifier, <strong>which in practice includes the Google account e-mail</strong>, so you can sign in again. That e-mail is not copied into our Firestore documents.</p>
+<div class="table-wrap"><table><thead><tr><th>Data</th><th>Purpose</th><th>Legal basis</th></tr></thead><tbody><tr><td><code>uid</code></td><td>Recognise you across visits and attach your progress</td><td>Performance of the requested service — GDPR art. 6.1.b</td></tr><tr><td>Google display name</td><td>Show your name in the interface</td><td>Art. 6.1.b</td></tr><tr><td>E-mail on the Authentication record (not copied to Firestore)</td><td>Google sign-in</td><td>Art. 6.1.b</td></tr><tr><td>SHA-256 e-mail hash (invited students only)</td><td>Recognise an enrolled student <strong>without</strong> storing the e-mail in Firestore</td><td>Art. 6.1.b (pre-contractual steps / performance of an existing class relationship)</td></tr></tbody></table></div>
+<h3>3.3. Learning data (signed-in users)</h3>
+<div class="table-wrap"><table><thead><tr><th>Data</th><th>Purpose</th><th>Legal basis</th></tr></thead><tbody><tr><td>Interface language</td><td>Show English or French</td><td>Art. 6.1.b</td></tr><tr><td>Scores / points</td><td>Progress tracking</td><td>Art. 6.1.b</td></tr><tr><td>Per-word progress (correct answers, views, and similar fields needed for review)</td><td>Let you resume</td><td>Art. 6.1.b</td></tr><tr><td>Words you add yourself</td><td>Keep them in your list</td><td>Art. 6.1.b</td></tr></tbody></table></div>
+<p>Without these, a learning account would not work.</p>
+<h3>3.4. Student invitation (created by the teacher, before first sign-in)</h3>
+<p>For people already enrolled in a class, an invitation file may exist in advance:</p>
+<ul><li><strong>SHA-256</strong> hash of the e-mail (not the e-mail in plain text);</li><li><strong>name</strong>;</li><li><strong>language</strong>;</li><li><strong>URL of the class Google Sheet</strong>.</li></ul>
+<div class="table-wrap"><table><thead><tr><th>Data</th><th>Purpose</th><th>Legal basis</th></tr></thead><tbody><tr><td>E-mail hash, name, language, sheet URL</td><td>Attach the student’s Google account to the class word list, without publishing the e-mail</td><td>Art. 6.1.b</td></tr></tbody></table></div>
+<p>The sheet itself holds <strong>course vocabulary</strong>, not your personal file. Your browser loads it from Google to display the words.</p>
+<h3>3.5. What we do not collect</h3>
+<ul><li>plain-text e-mail in Firestore;</li><li>advertising ids, third-party trackers, first-party cookies we would set ourselves;</li><li><strong>analytics</strong> — the service does not initialise it. A technical <code>measurementId</code> may still appear in a config file; it is unused;</li><li>payment data (there are no payments);</li><li>location, address book, photos, microphone, contacts.</li></ul>
+<p>We do <strong>not</strong> take automated decisions with legal or similarly significant effects (GDPR art. 22). Scores are for your learning, not for commercial profiling.</p>
+<hr>
+<h2>4. Who receives the data?</h2>
+<div class="table-wrap"><table><thead><tr><th>Recipient</th><th>Role</th><th>Why</th></tr></thead><tbody><tr><td><strong>Google LLC</strong> (and affiliates), <strong>Firebase Authentication</strong> and <strong>Cloud Firestore</strong></td><td><strong>Processor</strong> (GDPR art. 28) for service data</td><td>Sign-in and storage of the learning file. The browser calls Google directly.</td></tr><tr><td><strong>Google</strong>, for <strong>your Google Account</strong></td><td><strong>Separate controller</strong></td><td>Google’s sign-in screen, password, 2FA, etc. are not under our control.</td></tr><tr><td><strong>GitHub, Inc.</strong> (GitHub Pages)</td><td>Host of the site’s <strong>static files</strong></td><td>Like any site host, GitHub may keep <strong>technical connection logs</strong> (for example IP address, time, browser) under <strong>its</strong> policy. We do not collect those logs, we do not access them for the service, and we do not use them.</td></tr></tbody></table></div>
+<p>We do not sell data. No ad network, no marketing partner, no working analytics tool.</p>
+<p>Class vocabulary for students is read from a Google Sheet “published to the web”. Google hosts that sheet. It is not a named student file, apart from the URL stored in the invitation.</p>
+<hr>
+<h2>5. Transfers to the United States</h2>
+<p>Firebase and, where applicable, GitHub Pages may <strong>process data in the United States</strong> (outside the EU/EEA).</p>
+<p>For Google / Firebase, the transfer relies on:</p>
+<ul><li>the <strong>EU-US Data Privacy Framework</strong> adequacy decision (Google is certified), and/or</li><li>the European Commission’s <strong>standard contractual clauses</strong>, as included in Firebase’s data processing terms.</li></ul>
+<p>That is the mechanism in Chapter V GDPR (art. 45 and/or 46).</p>
+<hr>
+<h2>6. How long we keep data</h2>
+<p>We do not keep data forever.</p>
+<div class="table-wrap"><table><thead><tr><th>Data</th><th>Period</th></tr></thead><tbody><tr><td>Account + progress + words you added</td><td>For as long as you use the account. <strong>Deleted after 2 years without a sign-in.</strong></td></tr><tr><td>Student invitation</td><td>For as long as the student account exists; or <strong>2 years</strong> after creation if the student never signs in. Also deleted on request, or with the account.</td></tr><tr><td>E-mail on Firebase Authentication</td><td>Tied to the auth account; gone when that account is deleted.</td></tr><tr><td><code>sessionStorage</code> (guest trials)</td><td>Until you close the tab.</td></tr><tr><td><code>localStorage</code> (language, unsent progress)</td><td>Until you clear this site’s data, or the app sends / replaces it.</td></tr><tr><td>IndexedDB (Firebase session, Firestore cache)</td><td>Managed by the Firebase SDK in your browser; gone if you clear this site’s data.</td></tr><tr><td>The deletion-request e-mail itself</td><td>For as long as needed to handle it, then 3 years in a limited archive for that proof only.</td></tr></tbody></table></div>
+<p><strong>Why 2 years?</strong> The French authority (CNIL) treats two years of inactivity as a generally proportionate point at which to close unused online accounts, rather than keeping them indefinitely. We do not currently send an automatic reminder before deletion: we do not store a plain-text e-mail in Firestore, and we have no server from which to send campaigns. You can still ask for deletion at any time (section 7).</p>
+<p>We will revisit these periods if the service changes.</p>
+<hr>
+<h2>7. Your rights</h2>
+<p>Under GDPR you may, where the conditions are met:</p>
+<ul><li><strong>access</strong> your data (art. 15);</li><li><strong>rectify</strong> them (art. 16);</li><li><strong>erase</strong> them (art. 17);</li><li><strong>restrict</strong> processing (art. 18);</li><li><strong>receive</strong> them in a structured format (portability, art. 20) — including display name, language, words you added and the progress attached to the account, where processing is based on art. 6.1.b;</li><li><strong>object</strong> (art. 21) to processing based on legitimate interests. The processing listed here is based mainly on art. 6.1.b, so objection is not the primary right, but we will still look at every request.</li></ul>
+<p><strong>How to exercise them</strong></p>
+<p>Write to <strong>contact.blablakorea@gmail.com</strong> from the e-mail address of <strong>your Google account</strong>, and include your display name if you know it. That lets us find the <code>uid</code> and, for a student, the invitation (by recomputing the hash).</p>
+<p>We reply <strong>within one month</strong> (GDPR art. 12). We may extend by two months if the request is complex; we would tell you.</p>
+<p>There is <strong>not yet a delete button in the app</strong>. The path is e-mail. We then delete:</p>
+<ul><li>the <strong>Firebase Authentication</strong> account;</li><li>the Firestore file for the account (including progress and words you added);</li><li>the invitation file, if any.</li></ul>
+<p>You can also clear <strong>local</strong> copies (language, cache, session) in your browser settings for this site.</p>
+<p><strong>Complaint to the CNIL</strong></p>
+<p>If you are not satisfied, you may lodge a complaint with the Commission nationale de l’informatique et des libertés (CNIL), the French data protection authority: <a href="https://www.cnil.fr/en/home" rel="noopener noreferrer">https://www.cnil.fr/en/home</a> (complaints: <a href="https://www.cnil.fr/fr/plaintes" rel="noopener noreferrer">https://www.cnil.fr/fr/plaintes</a>).</p>
+<p><strong>Death</strong></p>
+<p>Under French law (art. 84 and 85 of the Data Protection Act), you may leave instructions about your data after death. Otherwise your heirs may, within the limits of the law, ask us to close the account or update certain data. Use the same e-mail.</p>
+<hr>
+<h2>8. Cookies, <code>localStorage</code>, <code>sessionStorage</code>, IndexedDB — why there is no banner</h2>
+<p>A “cookie” under Article 82 of the French Data Protection Act is not only the small HTTP file. Any reading or writing on your device (including <code>localStorage</code>, <code>sessionStorage</code>, IndexedDB) is in scope, <strong>unless</strong> it is strictly necessary for the service you asked for.</p>
+<p><strong>What the service writes in your browser</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Where</th><th>What</th><th>Necessary for</th><th>Prior consent?</th></tr></thead><tbody><tr><td><code>localStorage</code></td><td>Chosen language</td><td>Showing the interface in the language you asked for</td><td>No — interface personalisation that is part of the service (CNIL position)</td></tr><tr><td><code>localStorage</code></td><td>Progress not yet sent</td><td>Not losing a round if the upload fails or you are not signed in yet</td><td>No — strictly necessary for the learning service you asked for</td></tr><tr><td><code>sessionStorage</code></td><td>Guest-trial count</td><td>Providing the limited trial you asked for</td><td>No — necessary for that trial (similar to the sample-limiters the CNIL describes)</td></tr><tr><td>IndexedDB</td><td>Firebase sign-in session, Firestore cache</td><td>Staying signed in and running the app</td><td>No — authentication and providing the service</td></tr></tbody></table></div>
+<p><strong>We do not set:</strong> advertising cookies, social-plugin cookies, working analytics cookies, advertising ids.</p>
+<p><strong>So: no “Accept / Reject” banner.</strong> A banner is for trackers that are <strong>not</strong> strictly necessary. We do not use those. If we added any (for example non-exempt audience measurement, or Firebase Analytics), this section would change <strong>and</strong> a banner would appear <strong>before</strong> they were set.</p>
+<p>The CNIL recommends informing users even about exempt storage: that is the point of this section and of the short notice under the sign-in button.</p>
+<p>When you open Google sign-in, <strong>Google</strong> may set its own cookies on its domains (<code>accounts.google.com</code>, and similar). That is Google’s, for the time of authentication.</p>
+<hr>
+<h2>9. Minors</h2>
+<p>The service is for people learning Korean, including <strong>students of a Blabla Korean class</strong>. It is not a social network and users cannot contact each other.</p>
+<p>If the student is <strong>under 15</strong>, the account (Google sign-in) must be opened with the <strong>holder of parental authority</strong>. The teacher may prepare the invitation as part of the class, with that holder’s agreement.</p>
+<p><strong>What French law actually says</strong> (keep this whichever option you retain)</p>
+<ul><li>Article 45 of the French Data Protection Act sets <strong>15</strong> as the age at which a minor may <strong>consent alone</strong> to processing, for an information-society service offered directly to a child, <strong>where processing is based on consent</strong>.</li><li>Under 15, that consent must be <strong>joint</strong>: the child and the holder(s) of parental authority. Express agreement from <strong>one</strong> holder is enough; the other is presumed to agree, but must be able to object (CNIL, recommendation 4).</li><li>The processing in <strong>this</strong> policy is based mainly on <strong>article 6.1.b</strong> (providing the requested service), not on consent. The article 45 age of 15 therefore does not apply in the same way.</li><li>Separately, a child under 15 does not, as a rule, have <strong>civil capacity</strong> to enter into the terms of use alone. That is why a holder of parental authority must be involved if option B is used.</li></ul>
+<p>We do <strong>not</strong> verify age automatically.</p>
+<hr>
+<h2>10. Changes</h2>
+<p>If we change this policy in a material way (new data, new tool, new transfer, a cookie banner becoming necessary), we will update the date at the top and, for signed-in accounts, we will say so on the app’s help screen.</p>
+<p>Continued use after a non-material update (clarifications, typos, links) means you are looking at the version on the page. A change that would need <strong>consent</strong> (a non-exempt tracker, a new incompatible purpose) would <strong>not</strong> be slipped into a silent update: we would need your agreement first.</p>
+<hr>
+<h2>11. Governing law</h2>
+<p>The controller is established in France. GDPR and the French Data Protection Act apply. The competent authority is the <strong>CNIL</strong>.</p>
+<hr>
+<p><strong>How to delete your account and data</strong></p>
+<p>There is not yet a delete button in the app. E-mail <strong>contact.blablakorea@gmail.com</strong> with:</p>
+<ol><li>subject: <code>Account deletion — Voca Bank</code>;</li><li>the <strong>exact</strong> e-mail of your Google account (write from that address);</li><li>your display name, if you know it;</li><li>if you are a class student, the name your teacher uses.</li></ol>
+<p>We delete:</p>
+<ul><li>your sign-in account (Firebase Authentication);</li><li>your learning file (scores, per-word progress, words you added);</li><li>your invitation file, if any.</li></ul>
+<p>We reply <strong>within one month</strong>. After deletion you can still use the guest trial. A new Google sign-in would create an empty file.</p>
+<p>To clear copies on <strong>this</strong> device only: in the browser, clear this site’s data for <a href="https://mangocurly.github.io/blabla-korean-voca-bank/" rel="noopener noreferrer">https://mangocurly.github.io/blabla-korean-voca-bank/</a>. That does not close the Firebase account.</p>
+<p class="foot">© 2026 Jonghyuk Lee · Blabla Korea</p>
+</div>
+</body>
+</html>
