@@ -173,6 +173,10 @@ const T = {
     siteLink: "blablakorea.fr",
     hangulTest: "Test de niveau de coréen 🇰🇷",
     hangulTestSub: "Sur blablakorea.fr. E-mail demandé. Langue réglable au début du test.",
+    sheetLoadWarn: "Tes mots de cours n'ont pas pu être chargés. Les unités fonctionnent normalement. Rafraîchis la page pour réessayer.",
+    unitPickHint: "Touche l'unité pour changer d'unité.",
+    unitPickTitle: "Unités",
+    unitMoreLocked: (n)=>`${n} unité${n>1?'s':''} verrouillée${n>1?'s':''}`,
   },
   en: {
     tagline: "Learn Korean the spicy way 🌶️",
@@ -321,6 +325,10 @@ const T = {
     siteLink: "blablakorea.fr",
     hangulTest: "Korean level test 🇰🇷",
     hangulTestSub: "On blablakorea.fr. Email required. Language switch at the start.",
+    sheetLoadWarn: "Your class words could not be loaded. Units still work. Refresh the page to try again.",
+    unitPickHint: "Tap the unit to switch units.",
+    unitPickTitle: "Units",
+    unitMoreLocked: (n)=>`${n} more locked`,
   }
 };
 
@@ -415,11 +423,16 @@ function dropLearnedCache(){
   learnedCache = null;
   learnedCacheEpoch++;
   learnedCacheInflight = null;
+  // sheetUnitsLoaded 는 여기서 끄지 않는다.
+  // 이 함수는 퀴즈 채점 중에도 불린다 (app.js 의 quizAnswer).
+  // 시트 유닛 카드는 팩 퀴즈로 바뀌지 않으므로 다시 읽을 이유가 없다.
 }
 let customWordsLoaded = false;
 let pendingUnits = new Set(); // 저널에 쌓인 유닛 (세션 종료 시 1문서씩 커밋)
 let showPron = false;        // 발음 표시 토글 (세션 전체 공용, 문제별 개별 아님)
 let progressLocked = false;  // Firestore 진도 로딩 실패 시 true → 저장(덮어쓰기) 잠금으로 기존 데이터 보호
+let sheetFailed = false;     // 시트 CSV 실패. 팩은 있으므로 앱은 연다
+let sheetUnitsLoaded; // 시트 유닛 진도 세션 가드. 계정·단어 배열이 바뀔 때만 false
 let isGuest = false;         // 게스트 체험 (v3 §5). 익명 인증도, Firestore 접근도 없다
 let studentDocExists = false; // 첫 오픈 로그인은 레벨 테스트 뒤에 students 문서를 1회 만든다
 let pendingLevelTest = false;
@@ -722,12 +735,13 @@ async function switchPackLevel(level){
     alert(L.packLoadError);
     return;
   }
-  const custom = (student.words || []).filter(w => w.source === 'custom');
-  student.words = packWords.concat(custom);
+  const keep = (student.words || []).filter(w =>
+    w.source === 'custom' || !isPackUnit(unitIdForWord(w)));
+  student.words = packWords.concat(keep);
   currentPackLevel = lv;
   studentProg.lvl = lv;
-  // 단어를 다시 만들었으므로 예전에 읽은 유닛 메모리는 무효. custom 만 남긴다
-  loadedUnits = new Set([...loadedUnits].filter(id => id === 'custom'));
+  // 단어를 다시 만들었으므로 예전에 읽은 팩 유닛 메모리는 무효. custom·시트는 남긴다
+  loadedUnits = new Set([...loadedUnits].filter(id => !isPackUnit(id)));
   const next = lastUnitForLevel(lv);
   const available = listUnitIds();
   currentUnitId = available.includes(next) ? next : defaultUnitId();
@@ -783,6 +797,7 @@ async function startGuest(){
   currentUserEmail = null; currentUid = null; currentPackId = null;
   pendingUnits = new Set();
   loadedUnits = new Set();
+  sheetUnitsLoaded = false;
   dropLearnedCache();
   customWordsLoaded = false;
   progressLocked = true;          // 저장 경로 전체 잠금
@@ -842,9 +857,10 @@ function renderGuestWall(onContinue){
   $('#wallBackBtn').onclick = exitGuest;
 }
 
-/* ---------- 실제 학생: 구글시트에서 받아온 단어로 세팅 ---------- */
+/* ---------- 실제 학생: 이미 만들어진 단어 배열을 그대로 받는다.
+   wordsFromPack / buildWords 를 여기서 다시 부르면 wordId 가 두 번 계산된다. ---------- */
 async function setupStudent(invite, words, lang){
-  student = { name: invite.name, lang, words: await buildWords(words) };
+  student = { name: invite.name, lang, words };
   L = T[lang] || T.en;
   bank = 0; bestStreak = 0;
   document.documentElement.lang = lang;
@@ -921,9 +937,14 @@ function unitPassed(unitId){
   return total > 0 && knownCountForUnit(unitId) / total >= UNIT_PASS;
 }
 
-/* 정렬된 유닛 id (custom 제외). 해금 계산의 기준 순서다 */
+/* 팩에서 온 유닛인가. 시트 날짜 유닛(sheet-YYYY-MM-DD)과 custom 을 가른다 */
+function isPackUnit(id){
+  return /^ko-[ABC]-\d+$/.test(String(id||''));
+}
+
+/* 정렬된 팩 유닛 id. 해금 계산의 기준 순서다 */
 function orderedUnitIds(){
-  return listUnitIds().filter(id => id !== 'custom');
+  return listUnitIds().filter(isPackUnit);
 }
 
 /* 앞에서부터 몇 개 유닛이 열려 있는가.
@@ -931,10 +952,9 @@ function orderedUnitIds(){
    - 통과한(80%) 유닛의 다음 유닛이 열린다
    - 레벨 테스트 배치 유닛(studentProg.cur)과, 이미 진도가 있는 유닛은
      그보다 앞이면 무조건 열어 준다 (기존 사용자가 잠기면 안 된다)
-   - 시트 사용자(날짜별 유닛)는 순차 개념이 없으므로 전부 열린다 */
+   - 시트 학생도 팩 유닛은 같은 순차 해금이다 */
 function unlockedCount(){
   const ids = orderedUnitIds();
-  if(isSheetUser()) return ids.length;
   let n = 1;
   ids.forEach((id, i)=>{
     const hasProgress = !!(studentProg.u && studentProg.u[id] > 0);
@@ -1041,23 +1061,17 @@ async function restoreProgress(preloadedSnap){
       u: (prog.u && typeof prog.u === 'object' && !Array.isArray(prog.u)) ? prog.u : {},
       lvl: currentPackLevel || (prog.lvl ? normalizePackLevel(prog.lvl) : null)
     };
-    if(!isSheetUser() && !studentProg.cur){
+    if(!studentProg.cur || !isPackUnit(studentProg.cur)){
       pendingLevelTest = true;
       currentUnitId = null;
       return;
     }
-    if(!studentProg.cur) studentProg.cur = defaultUnitId();
   } else {
     bank = 100;
-    if(!isSheetUser()){
-      studentProg = { cur: null, u: {}, lvl: null };
-      currentUnitId = null;
-      pendingLevelTest = true;
-      return;
-    }
-    studentProg = { cur: defaultUnitId(), u: {}, lvl: currentPackLevel || null };
-    await D().setDoc(studentRef(), newStudentDoc());
-    studentDocExists = true;
+    studentProg = { cur: null, u: {}, lvl: null };
+    currentUnitId = null;
+    pendingLevelTest = true;
+    return;
   }
   const available = listUnitIds();
   if(studentProg.cur !== 'custom' && available.length && !available.includes(studentProg.cur)){
@@ -1181,10 +1195,11 @@ async function applyLevelPlacement(level, unitN){
       alert(L.packLoadError);
       return;
     }
-    const custom = (student.words || []).filter(w => w.source === 'custom');
-    student.words = packWords.concat(custom);
+    const keep = (student.words || []).filter(w =>
+      w.source === 'custom' || !isPackUnit(unitIdForWord(w)));
+    student.words = packWords.concat(keep);
     currentPackLevel = lv;
-    loadedUnits = new Set([...loadedUnits].filter(id => id === 'custom'));
+    loadedUnits = new Set([...loadedUnits].filter(id => !isPackUnit(id)));
   }
   currentUnitId = unitId;
   studentProg.cur = unitId;
@@ -1448,6 +1463,7 @@ async function handleLoginSuccess(user){
   guestReset();
   studentDocExists = false;
   pendingLevelTest = false;
+  sheetFailed = false;
   levelTest = null;
   // 조회 실패(네트워크·권한)와 문서 없음(미등록)은 전혀 다른 상황이다. 뭉뚱그리지 않는다.
   let invite;
@@ -1477,6 +1493,7 @@ async function handleLoginSuccess(user){
   currentPackId = invite.packId || null;
   pendingUnits = new Set();
   loadedUnits = new Set();
+  sheetUnitsLoaded = false;
   dropLearnedCache();
   customWordsLoaded = false;
   studentProg = { cur: null, u: {}, lvl: null };
@@ -1487,27 +1504,25 @@ async function handleLoginSuccess(user){
   progressLocked = false;
 
   // ── 1단계: 단어 불러오기 ──
-  // 오픈 사용자는 공용 팩 JSON (레벨당 fetch 1회). 등록 학생은 자기 시트만 — 팩으로 대체하지 않는다.
-  let words;
-  let studentSnap;
-  if(isOpenUser){
+  // 팩은 전원 공통. 시트 학생은 자기 단어를 「추가로」 받는다.
+  let words, studentSnap;
+  try{
+    studentSnap = await D().getDoc(studentRef());
+    const savedLvl = studentSnap.exists() ? (studentSnap.data().prog || {}).lvl : 'A';
+    currentPackLevel = normalizePackLevel(savedLvl);
+    words = await wordsFromPack(currentPackLevel, lang);
+  }catch(e){
+    console.error('① 공용 팩 로딩 실패:', e);
+    renderPackLoadError(lang, false);
+    return;
+  }
+  if(!isOpenUser && invite.vocabCsvUrl){
     try{
-      studentSnap = await D().getDoc(studentRef());
-      const savedLvl = studentSnap.exists() ? (studentSnap.data().prog || {}).lvl : 'A';
-      currentPackLevel = normalizePackLevel(savedLvl);
-      words = await wordsFromPack(currentPackLevel, lang);
-    } catch(e){
-      console.error('① 공용 팩 로딩 실패:', e);
-      renderPackLoadError(lang, false);
-      return;
-    }
-  } else {
-    try{
-      words = await getStudentVocab(invite);
-    } catch(e){
-      console.error('① 단어 CSV 로딩 실패 (구글시트/CSV 링크 확인 필요):', e);
-      renderVocabNotReady(lang);
-      return;
+      const sheetWords = await getStudentVocab(invite);
+      words = words.concat(await buildWords(sheetWords));
+    }catch(e){
+      console.error('① 시트 단어 로딩 실패 (팩으로 계속 진행):', e);
+      sheetFailed = true;
     }
   }
   await setupStudent(invite, words, lang);
@@ -1517,7 +1532,7 @@ async function handleLoginSuccess(user){
 
   // ── 2단계: Firestore에서 포인트/prog/현재 유닛 불러오기 ──
   try{
-    await restoreProgress(isOpenUser ? studentSnap : undefined);
+    await restoreProgress(studentSnap);
   } catch(e){
     console.error('② 진도 불러오기 실패 (Firestore 문제 — 앱은 열지만 저장을 잠급니다):', e);
     progressLocked = true;
@@ -1544,11 +1559,13 @@ async function doLogout(){
   currentUnitId = null;
   studentProg = { cur: null, u: {}, lvl: null };
   loadedUnits = new Set();
+  sheetUnitsLoaded = false;
   dropLearnedCache();
   customWordsLoaded = false;
   pendingUnits = new Set();
   studentDocExists = false;
   pendingLevelTest = false;
+  sheetFailed = false;
   levelTest = null;
   if(hadUser){
     try{ await window.fb.signOut(window.fb.auth); } catch(e){ console.error(e); }
@@ -1586,7 +1603,7 @@ function initApp(){
     });
     else { currentUserEmail = null; currentUid = null; currentPackId = null; currentPackLevel = null;
            currentUnitId = null; studentProg = { cur: null, u: {}, lvl: null };
-           loadedUnits = new Set(); dropLearnedCache(); customWordsLoaded = false; pendingUnits = new Set();
+           loadedUnits = new Set(); sheetUnitsLoaded = false; dropLearnedCache(); customWordsLoaded = false; pendingUnits = new Set();
            isGuest = false; guestReset(); renderLogin(); }
   });
 }
@@ -1776,7 +1793,7 @@ function renderPackLoadError(lang, fromGuest){
     isGuest = false;
     currentUserEmail = null; currentUid = null; currentPackId = null; currentPackLevel = null;
     currentUnitId = null; studentProg = { cur: null, u: {}, lvl: null };
-    loadedUnits = new Set(); dropLearnedCache(); customWordsLoaded = false; pendingUnits = new Set();
+    loadedUnits = new Set(); sheetUnitsLoaded = false; dropLearnedCache(); customWordsLoaded = false; pendingUnits = new Set();
     if(fromGuest){ renderLogin(); return; }
     try{ await window.fb.signOut(window.fb.auth); }
     catch(e){ console.error(e); renderLogin(); }
@@ -1798,24 +1815,46 @@ function renderVocabNotReady(lang){
   $('#vocabLogoutBtn').onclick = async ()=>{
     currentUserEmail = null; currentUid = null; currentPackId = null; currentPackLevel = null;
     currentUnitId = null; studentProg = { cur: null, u: {}, lvl: null };
-    loadedUnits = new Set(); dropLearnedCache(); customWordsLoaded = false; pendingUnits = new Set();
+    loadedUnits = new Set(); sheetUnitsLoaded = false; dropLearnedCache(); customWordsLoaded = false; pendingUnits = new Set();
     try{ await window.fb.signOut(window.fb.auth); }   // onAuthStateChanged → renderLogin()
     catch(e){ console.error(e); renderLogin(); }
   };
+}
+
+/* 시트 날짜 유닛의 진도. 기존 학생이 수업에서 쌓은 카드는 units/sheet-YYYY-MM-DD 에 있는데
+   restoreProgress 는 팩 유닛 하나만 읽으므로 아무도 이걸 읽지 않는다.
+   해금 계산(orderedUnitIds)은 팩 유닛만 보므로 loadedUnits 에 넣어도 해금이 흔들리지 않는다. */
+async function ensureSheetUnits(){
+  if(sheetUnitsLoaded) return;
+  sheetUnitsLoaded = true;
+  if(!currentUid || progressLocked) return;
+  const ids = Object.keys(studentProg.u || {})
+    .filter(id => id !== 'custom' && !isPackUnit(id));
+  for(const id of ids){
+    if(loadedUnits.has(id)) continue;
+    try{
+      const snap = await D().getDoc(unitRef(id));
+      loadedUnits.add(id);
+      if(snap.exists()) applyPackedUnit(id, snap.data());
+    }catch(e){
+      console.error('시트 유닛 읽기 실패:', id, e);
+    }
+  }
 }
 
 /* 레벨 A·B·C 를 가로지르는 「배운 단어」 목록.
    팩 JSON 은 정적 파일이라 몇 개를 읽든 Firestore 비용이 0이다.
    Firestore 는 studentProg.u 에 이름이 올라온 유닛만 읽는다 —
    학생이 실제로 손댄 유닛 수만큼이므로 읽기 수가 유닛 전체로 불어나지 않는다.
-   loadedUnits / student.words / studentProg 는 건드리지 않는다 (F1 해금 입력). */
+   팩 유닛은 loadedUnits 에 넣지 않는다 (F1 해금 입력). 시트 유닛은 아래 게으른 로더. */
 async function buildLearnedCache(){
   if(learnedCache) return learnedCache;
   if(learnedCacheInflight) return learnedCacheInflight;
   const epoch = learnedCacheEpoch;
   const inflight = (async ()=>{
+    await ensureSheetUnits();
     const current = (student && student.words || []).filter(w => (w.gradedCorrect||0) > 0);
-    if(isSheetUser() || !currentUid || progressLocked){
+    if(!currentUid || progressLocked){
       if(epoch === learnedCacheEpoch) learnedCache = current;
       return current;
     }
@@ -1876,7 +1915,6 @@ function stats(){
 }
 
 function levelSwitchHtml(){
-  if(isSheetUser()) return '';
   const lv = currentPackLevel || 'A';
   const btn = (id, label) =>
     `<button type="button" class="btn ${lv===id ? '' : 'secondary'}" data-lvl="${id}" style="flex:1;padding:10px 8px;font-size:.82rem">${id} · ${escapeHtml(label)}</button>`;
@@ -1886,33 +1924,55 @@ function levelSwitchHtml(){
     </div>`;
 }
 
-function unitListHtml(){
-  const ids = listUnitIds();
-  const cur = currentUnitId || ids[0];
-  if(!cur) return '';
-  const row = (id, accent)=>{
-    const locked = !unitUnlocked(id);
-    const total = unitTotal(id);
-    const known = knownCountForUnit(id);
-    const check = !locked && unitPassed(id) ? ' ✓' : '';
-    const emoji = locked ? '🔒' : (id === 'custom' ? '📝' : (id === cur ? '📌' : '📗'));
-    const sub = locked ? L.unitLocked : `${known}/${total}${id===cur ? ' · ' + L.continueStudy : ''}`;
-    const dataAttr = locked ? `data-locked="${escapeHtml(id)}"` : `data-unit="${escapeHtml(id)}"`;
-    const styles = [];
-    if(locked) styles.push('opacity:.55','cursor:default');
-    if(accent && !locked) styles.push('border-color:var(--accent)');
-    const styleAttr = styles.length ? ` style="${styles.join(';')}"` : '';
-    return `<button class="menu-btn" ${dataAttr}${styleAttr}>
+function unitRowHtml(id, {accent, current, clickable}){
+  const locked = !unitUnlocked(id);
+  const total = unitTotal(id);
+  const known = knownCountForUnit(id);
+  const check = !locked && unitPassed(id) ? ' ✓' : '';
+  const emoji = locked ? '🔒' : (id === 'custom' ? '📝' : (current ? '📌' : '📗'));
+  const sub = locked ? L.unitLocked : `${known}/${total}${current && clickable ? ' · ' + L.continueStudy : ''}`;
+  let dataAttr = '';
+  if(clickable){
+    dataAttr = locked ? `data-locked="${escapeHtml(id)}"` : `data-unit="${escapeHtml(id)}"`;
+  }
+  const styles = [];
+  if(locked) styles.push('opacity:.55','cursor:default');
+  if(accent && !locked) styles.push('border-color:var(--accent)');
+  if(!clickable) styles.push('cursor:default');
+  const styleAttr = styles.length ? ` style="${styles.join(';')}"` : '';
+  const arrow = clickable ? '<span class="arrow">→</span>' : '';
+  return `<button class="menu-btn" ${dataAttr}${styleAttr}>
       <span class="emoji">${emoji}</span>
       <span class="mtext"><b>${escapeHtml(unitTitle(id))}${check}</b>
         <span>${sub}</span></span>
-      <span class="arrow">→</span>
+      ${arrow}
     </button>`;
-  };
-  const rest = ids.filter(id => id !== cur);
+}
+
+function unitListHtml(){
+  const ids = listUnitIds().filter(id => id !== 'custom');
+  const cur = (currentUnitId && currentUnitId !== 'custom') ? currentUnitId : ids[0];
+  if(!cur) return '';
   return `<div class="section-title">${L.unitSection}</div>` +
-    row(cur, true) +
-    rest.map(id => row(id, false)).join('');
+    unitRowHtml(cur, {accent:true, current:true, clickable:true}) +
+    `<div style="color:var(--text-muted);font-size:.78rem;margin:6px 14px 14px;line-height:1.45">${escapeHtml(L.unitPickHint)}</div>`;
+}
+
+function unitPickerHtml(viewingId){
+  const ids = orderedUnitIds();
+  const nUnlock = unlockedCount();
+  const unlocked = ids.slice(0, nUnlock);
+  const locked = ids.slice(nUnlock);
+  const shownLocked = locked.slice(0, 3);
+  const moreLocked = locked.length - shownLocked.length;
+  const rows = unlocked.concat(shownLocked).map(id => {
+    const isCurrent = id === viewingId;
+    return unitRowHtml(id, {accent:isCurrent, current:isCurrent, clickable:!isCurrent});
+  }).join('');
+  const more = moreLocked > 0
+    ? `<div style="color:var(--text-muted);font-size:.78rem;margin:8px 14px 4px">+ ${escapeHtml(L.unitMoreLocked(moreLocked))}</div>`
+    : '';
+  return `<div class="section-title">${L.unitPickTitle}</div>` + rows + more;
 }
 
 function feedbackMailto(){
@@ -1955,6 +2015,7 @@ function renderHome(){
   const s = stats();
   app.innerHTML = topbar() + `
     ${(progressLocked && !isGuest) ? `<div class="save-warning">⚠️ ${L.progressSaveOff}</div>` : ''}
+    ${sheetFailed ? `<div class="save-warning">⚠️ ${escapeHtml(L.sheetLoadWarn)}</div>` : ''}
     <div class="hello">
       <img src="${IMG.excited}" alt="">
       <div>
@@ -1989,12 +2050,11 @@ function renderHome(){
       <span class="mtext"><b>${L.quiz}</b><span>${L.quizSub}</span></span>
       <span class="arrow">→</span>
     </button>
-    ${!isSheetUser() ? `
     <button class="menu-btn" id="levelTestBtn">
       <span class="emoji">📍</span>
       <span class="mtext"><b>${L.ltRetake}</b><span>${L.ltRetakeSub}</span></span>
       <span class="arrow">→</span>
-    </button>` : ''}
+    </button>
     <a class="menu-btn" id="hangulTestLink" href="${escapeHtml(L===T.fr ? 'https://www.blablakorea.fr/test-coreen' : 'https://en.blablakorea.fr/test-coreen')}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">
       <span class="emoji">🇰🇷</span>
       <span class="mtext"><b>${L.hangulTest}</b><span>${L.hangulTestSub}</span></span>
@@ -2039,7 +2099,7 @@ function renderHome(){
   }
   $('#statLearned').onclick = renderLearned;
   $('#statKnown').onclick = renderKnown;
-  if(!learnedCache && !isSheetUser()){
+  if(!learnedCache){
     buildLearnedCache().then(list=>{
       const el = $('#statLearned b');
       if(el) el.textContent = String(list.length);
@@ -2086,10 +2146,17 @@ async function renderUnit(unitId){
       <span class="mtext"><b>${L.unitDoQuiz}</b><span>${L.quizSub}</span></span>
       <span class="arrow">→</span>
     </button>
+    ${unitPickerHtml(unitId)}
   `;
   wireBackBtn();
   $('#unitCardsBtn').onclick = ()=>startReview('unit');
   $('#unitQuizBtn').onclick = ()=>startQuiz(currentUnitWords());
+  app.querySelectorAll('[data-unit]').forEach(btn=>{
+    btn.onclick = ()=>renderUnit(btn.dataset.unit);
+  });
+  app.querySelectorAll('[data-locked]').forEach(btn=>{
+    btn.onclick = ()=>alert(L.unitLockedHint);
+  });
 }
 
 /* ---------- 날짜별 단어 ---------- */
@@ -2101,60 +2168,37 @@ function isStudied(w){
 async function renderWords(selectedDate = "all"){
   botnav.classList.remove('hidden');
   setNav('words');
-  if(!isSheetUser()){
-    await buildLearnedCache();
-    const units = listUnitIds().filter(id => {
-      if(id === 'custom') return wordsInUnit(id).length > 0;
-      return wordsInUnit(id).some(isStudied);
-    });
-    const byUnit = {};
-    units.forEach(id => { byUnit[id] = wordsInUnit(id).filter(isStudied); });
-    let html = backBtn() + topbar() + `<h2 style="margin:6px 2px 4px">📖 ${L.words}</h2>
-      <div class="sub" style="color:var(--text-muted);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>`;
-    if(!units.length){
-      html += `<div class="card" style="text-align:center;color:var(--text-muted)">
-        <img src="${IMG.grumpy}" style="width:120px;margin-bottom:10px" alt="">
-        <p>${L.emptyStudied}</p></div>`;
-      app.innerHTML = html;
-      wireBackBtn();
-      return;
-    }
-    const shown = selectedDate === 'all' ? units : units.filter(id => id === selectedDate);
-    html += `<select id="dateFilter" style="width:100%;margin:10px 0 2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;font-size:1rem;color:var(--text);font-family:inherit;cursor:pointer">
-        <option value="all">📅 ${L.allDates}</option>
-        ${units.map(id=>`<option value="${escapeHtml(id)}" ${id===selectedDate?'selected':''}>${escapeHtml(unitTitle(id))} · ${byUnit[id].length}</option>`).join('')}
-      </select>`;
-    shown.forEach(id=>{
-      const list = byUnit[id] || [];
-      html += `<div class="day-block">
-        <div class="day-head">📗 ${escapeHtml(unitTitle(id))} <span class="count">· ${list.length}</span></div>`;
-      list.forEach(w=>{ html += wordRowHtml(w); });
-      html += `</div>`;
-    });
+  await buildLearnedCache();
+  const units = listUnitIds().filter(id => {
+    if(id === 'custom') return wordsInUnit(id).length > 0;
+    if(!isPackUnit(id)) return wordsInUnit(id).length > 0;   // 시트 날짜 유닛은 항상
+    return wordsInUnit(id).some(isStudied);                  // 팩 유닛은 학습한 것만
+  });
+  const byUnit = {};
+  units.forEach(id => {
+    const list = wordsInUnit(id);
+    byUnit[id] = isPackUnit(id) ? list.filter(isStudied) : list;
+  });
+  let html = backBtn() + topbar() + `<h2 style="margin:6px 2px 4px">📖 ${L.words}</h2>
+    <div class="sub" style="color:var(--text-muted);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>`;
+  if(!units.length){
+    html += `<div class="card" style="text-align:center;color:var(--text-muted)">
+      <img src="${IMG.grumpy}" style="width:120px;margin-bottom:10px" alt="">
+      <p>${L.emptyStudied}</p></div>`;
     app.innerHTML = html;
     wireBackBtn();
-    wireDeleteButtons(()=>renderWords(selectedDate));
-    $('#dateFilter').onchange = (e)=>renderWords(e.target.value);
     return;
   }
-  const byDate = {};
-  student.words.forEach(w=>{ (byDate[w.date] ||= []).push(w); });
-  const dates = Object.keys(byDate).sort().reverse();
-  const shown = selectedDate === "all" ? dates : dates.filter(d=>d===selectedDate);
-
-  let html = backBtn() + topbar() + `<h2 style="margin:6px 2px 4px">📖 ${L.words}</h2>
-    <div class="sub" style="color:var(--text-muted);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>
-    <select id="dateFilter" style="width:100%;margin:10px 0 2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;font-size:1rem;color:var(--text);font-family:inherit;cursor:pointer">
+  const shown = selectedDate === 'all' ? units : units.filter(id => id === selectedDate);
+  html += `<select id="dateFilter" style="width:100%;margin:10px 0 2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;font-size:1rem;color:var(--text);font-family:inherit;cursor:pointer">
       <option value="all">📅 ${L.allDates}</option>
-      ${dates.map(d=>`<option value="${escapeHtml(d)}" ${d===selectedDate?'selected':''}>${escapeHtml(fmtDate(d))} ${escapeHtml(d.split('-')[0])} · ${byDate[d].length}</option>`).join('')}
+      ${units.map(id=>`<option value="${escapeHtml(id)}" ${id===selectedDate?'selected':''}>${escapeHtml(unitTitle(id))} · ${byUnit[id].length}</option>`).join('')}
     </select>`;
-  shown.forEach(d=>{
-    const list = byDate[d];
+  shown.forEach(id=>{
+    const list = byUnit[id] || [];
     html += `<div class="day-block">
-      <div class="day-head">📅 ${escapeHtml(fmtDate(d))} <span class="count">· ${list.length}</span></div>`;
-    list.forEach(w=>{
-      html += wordRowHtml(w);
-    });
+      <div class="day-head">📗 ${escapeHtml(unitTitle(id))} <span class="count">· ${list.length}</span></div>`;
+    list.forEach(w=>{ html += wordRowHtml(w); });
     html += `</div>`;
   });
   app.innerHTML = html;
@@ -2235,9 +2279,10 @@ function deleteCustomWord(wordId, reRenderFn){
 }
 
 /* ---------- 아는 단어 / 마스터 ---------- */
-function renderKnown(){
+async function renderKnown(){
   botnav.classList.remove('hidden');
   setNav('known');
+  await ensureSheetUnits();
   const known = student.words.filter(w=>["known","master"].includes(wordStatus(w)));
   let html = backBtn() + topbar() + `<div class="hello">
       <img src="${IMG.money}" alt="" style="width:70px">
@@ -2573,6 +2618,7 @@ function reviewPool(mode){
 async function startReview(mode='learned'){
   if(guestWallDue()){ renderGuestWall(()=>startReview(mode)); return; }
   if(currentUnitId === 'custom') await ensureCustomWords();
+  if(mode === 'learned') await ensureSheetUnits();
   document.onkeydown = null;
   session = null;
   const cards = shuffle(reviewPool(mode));
