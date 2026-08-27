@@ -56,6 +56,8 @@ const T = {
     /* 🎯 quiz de mots classique */
     quiz: "Quiz de mots 🎯",
     quizSub: "4 choix · à ton rythme, sans chrono",
+    quizAll: "Quiz mélangé 🎲",
+    quizAllSub: "Tout ce que tu as ouvert · 4 choix",
     qCountQ: (a,b)=>`Question ${a} / ${b}`,
     moreQuiz: "10 questions de plus",
     /* 🃏 cartes-mémo */
@@ -145,11 +147,12 @@ const T = {
     continueStudy: "Continuer",
     unitSection: "Apprendre de nouveaux mots",
     unitLocked: "Verrouillé",
-    unitLockedHint: "Termine 80 % des mots de l'unité précédente pour ouvrir celle-ci.",
+    unitLockedHint: "Vois tous les mots de l'unité précédente au quiz pour ouvrir celle-ci.",
     unitLearnCards: "Apprendre avec les cartes",
     unitLearnCardsSub: "Sans score, sans stress",
     unitDoQuiz: "Faire le quiz",
-    unitNamed: (n)=>`Unité ${n}`,
+    unitNamed: (n, lvl)=>`Unité ${n} · ${lvl}`,
+    unitSeenLabel: "vus",
     unitCustom: "Mes mots",
     unitUnsorted: "Autres",
     levelSection: "Niveau",
@@ -165,6 +168,9 @@ const T = {
     ltOfCorrect: (c, t)=>`${c} bonnes réponses sur ${t}`,
     ltStartHere: "Commencer ici",
     ltStartOver: "Recommencer depuis le début",
+    ltStartTitle: (name, n)=>`🎉 Ton niveau : ${name} (autour de l'unité ${n})`,
+    ltStartBody: "On commence par la première unité pour bien poser les bases. Tu avanceras vite sur ce que tu connais déjà.",
+    ltStartBtn: "Commencer",
     feedbackTitle: "Envoyer un avis 💌",
     feedbackBody: "Voca Bank est 100 % gratuit. Dis-nous ce qui ne va pas, on l'améliorera.",
     feedbackBtn: "Écrire un e-mail",
@@ -174,6 +180,9 @@ const T = {
     hangulTest: "Test de niveau de coréen 🇰🇷",
     hangulTestSub: "Sur blablakorea.fr. E-mail demandé. Langue réglable au début du test.",
     sheetLoadWarn: "Tes mots de cours n'ont pas pu être chargés. Les unités fonctionnent normalement. Rafraîchis la page pour réessayer.",
+    saveFailWarn: "Ta progression n'a pas pu être enregistrée. Reste connecté et rafraîchis la page. Si le problème continue, écris-nous.",
+    feedbackCopy: "Copier l'adresse",
+    feedbackCopied: "Copié !",
     unitPickHint: "Touche l'unité pour changer d'unité.",
     unitPickTitle: "Unités",
     unitMoreLocked: (n)=>`${n} unité${n>1?'s':''} verrouillée${n>1?'s':''}`,
@@ -208,6 +217,8 @@ const T = {
     /* 🎯 classic word quiz */
     quiz: "Word quiz 🎯",
     quizSub: "4 choices · your own pace, no timer",
+    quizAll: "Mixed quiz 🎲",
+    quizAllSub: "Everything you've unlocked · 4 choices",
     qCountQ: (a,b)=>`Question ${a} / ${b}`,
     moreQuiz: "10 more questions",
     /* 🃏 flashcards */
@@ -297,11 +308,12 @@ const T = {
     continueStudy: "Continue",
     unitSection: "Learn new words",
     unitLocked: "Locked",
-    unitLockedHint: "Learn 80% of the previous unit to unlock this one.",
+    unitLockedHint: "See every word of the previous unit in the quiz to unlock this one.",
     unitLearnCards: "Learn with flashcards",
     unitLearnCardsSub: "No score, no pressure",
     unitDoQuiz: "Take the quiz",
-    unitNamed: (n)=>`Unit ${n}`,
+    unitNamed: (n, lvl)=>`${lvl} Unit ${n}`,
+    unitSeenLabel: "seen",
     unitCustom: "My words",
     unitUnsorted: "Other",
     levelSection: "Level",
@@ -317,6 +329,9 @@ const T = {
     ltOfCorrect: (c, t)=>`${c} of ${t} correct`,
     ltStartHere: "Start here",
     ltStartOver: "Start from the beginning",
+    ltStartTitle: (name, n)=>`🎉 Your level: ${name} (around unit ${n})`,
+    ltStartBody: "We'll start from the first unit to build a solid base. You'll move fast through what you already know.",
+    ltStartBtn: "Start here",
     feedbackTitle: "Send feedback 💌",
     feedbackBody: "Voca Bank is 100% free. Tell us what's wrong and we'll make it better.",
     feedbackBtn: "Write an email",
@@ -326,6 +341,9 @@ const T = {
     hangulTest: "Korean level test 🇰🇷",
     hangulTestSub: "On blablakorea.fr. Email required. Language switch at the start.",
     sheetLoadWarn: "Your class words could not be loaded. Units still work. Refresh the page to try again.",
+    saveFailWarn: "Your progress could not be saved. Stay signed in and refresh the page. If it keeps happening, write to us.",
+    feedbackCopy: "Copy the address",
+    feedbackCopied: "Copied!",
     unitPickHint: "Tap the unit to switch units.",
     unitPickTitle: "Units",
     unitMoreLocked: (n)=>`${n} more locked`,
@@ -432,6 +450,7 @@ let pendingUnits = new Set(); // 저널에 쌓인 유닛 (세션 종료 시 1문
 let showPron = false;        // 발음 표시 토글 (세션 전체 공용, 문제별 개별 아님)
 let progressLocked = false;  // Firestore 진도 로딩 실패 시 true → 저장(덮어쓰기) 잠금으로 기존 데이터 보호
 let sheetFailed = false;     // 시트 CSV 실패. 팩은 있으므로 앱은 연다
+let saveFailed = false;      // 세션 저장이 한 번이라도 거부됐다
 let sheetUnitsLoaded; // 시트 유닛 진도 세션 가드. 계정·단어 배열이 바뀔 때만 false
 let isGuest = false;         // 게스트 체험 (v3 §5). 익명 인증도, Firestore 접근도 없다
 let studentDocExists = false; // 첫 오픈 로그인은 레벨 테스트 뒤에 students 문서를 1회 만든다
@@ -442,7 +461,6 @@ let levelTestCache = null;
 /* 오답 페널티는 폐지했다 (v3 D7) — 틀린 답에서 돈을 깎으면 모르는 단어를 피하게 된다.
    틀린 문항은 돈 대신 세션 끝 재출제 1회로 되갚는다 (§3.4-1). */
 const REWARD = 100, KNOWN_STREAK = 3;
-const UNIT_PASS = 0.8;       // 아는 단어 비율이 이 이상이면 유닛 통과 표시
 
 /* 배포 후 실제 URL 로 바꾼다. 비어 있으면 링크를 아예 그리지 않는다 */
 const LEGAL_URL = {
@@ -926,15 +944,20 @@ function unitTotal(unitId){
 }
 
 function knownCountForUnit(unitId){
+  // 3연속 정답. studentProg.u 는 본 수라서 여기서 쓰지 않는다.
+  return wordsInUnit(unitId).filter(w => ['known','master'].includes(wordStatus(w))).length;
+}
+
+function seenCountForUnit(unitId){
   if(!currentUid || loadedUnits.has(unitId)){
-    return wordsInUnit(unitId).filter(w => ['known','master'].includes(wordStatus(w))).length;
+    return wordsInUnit(unitId).filter(w => w.type !== 'sentence' && (w.reps|0) > 0).length;
   }
   return (studentProg.u && studentProg.u[unitId]) || 0;
 }
 
 function unitPassed(unitId){
   const total = unitTotal(unitId);
-  return total > 0 && knownCountForUnit(unitId) / total >= UNIT_PASS;
+  return total > 0 && seenCountForUnit(unitId) >= total;
 }
 
 /* 팩에서 온 유닛인가. 시트 날짜 유닛(sheet-YYYY-MM-DD)과 custom 을 가른다 */
@@ -949,7 +972,7 @@ function orderedUnitIds(){
 
 /* 앞에서부터 몇 개 유닛이 열려 있는가.
    - 첫 유닛은 항상 열린다
-   - 통과한(80%) 유닛의 다음 유닛이 열린다
+   - 단어를 전부 본(퀴즈 reps>0) 유닛의 다음 유닛이 열린다
    - 레벨 테스트 배치 유닛(studentProg.cur)과, 이미 진도가 있는 유닛은
      그보다 앞이면 무조건 열어 준다 (기존 사용자가 잠기면 안 된다)
    - 시트 학생도 팩 유닛은 같은 순차 해금이다 */
@@ -971,6 +994,11 @@ function unitUnlocked(unitId){
   return i >= 0 && i < unlockedCount();
 }
 
+function unlockedPoolWords(){
+  const ids = orderedUnitIds().slice(0, unlockedCount());
+  return ids.flatMap(id => wordsInUnit(id));
+}
+
 function unitTitle(id){
   if(id === 'custom') return L.unitCustom;
   if(id === 'unsorted') return L.unitUnsorted;
@@ -978,8 +1006,11 @@ function unitTitle(id){
   if(sheet){
     try{ return fmtDate(sheet[1]); }catch(e){ return sheet[1]; }
   }
-  const ko = String(id||'').match(/^ko-[ABC]-(\d+)$/);
-  if(ko) return L.unitNamed(parseInt(ko[1], 10));
+  const ko = String(id||'').match(/^ko-([ABC])-(\d+)$/);
+  if(ko){
+    const lvlName = ko[1]==='A' ? L.levelA : ko[1]==='B' ? L.levelB : L.levelC;
+    return L.unitNamed(parseInt(ko[2], 10), lvlName);
+  }
   return id;
 }
 
@@ -1061,16 +1092,16 @@ async function restoreProgress(preloadedSnap){
       u: (prog.u && typeof prog.u === 'object' && !Array.isArray(prog.u)) ? prog.u : {},
       lvl: currentPackLevel || (prog.lvl ? normalizePackLevel(prog.lvl) : null)
     };
-    if(!studentProg.cur || !isPackUnit(studentProg.cur)){
-      pendingLevelTest = true;
-      currentUnitId = null;
-      return;
-    }
   } else {
     bank = 100;
     studentProg = { cur: null, u: {}, lvl: null };
-    currentUnitId = null;
+  }
+  const curFromDoc = studentProg.cur;
+  await recoverJournal();
+  studentProg.cur = curFromDoc;
+  if(!studentProg.cur || !isPackUnit(studentProg.cur)){
     pendingLevelTest = true;
+    currentUnitId = null;
     return;
   }
   const available = listUnitIds();
@@ -1078,7 +1109,6 @@ async function restoreProgress(preloadedSnap){
     studentProg.cur = defaultUnitId();
   }
   currentUnitId = studentProg.cur || defaultUnitId();
-  await recoverJournal();
   await loadUnit(currentUnitId);
 }
 
@@ -1183,8 +1213,7 @@ async function persistPlacement(){
 
 async function applyLevelPlacement(level, unitN){
   const lv = normalizePackLevel(level);
-  const n = Math.max(1, unitN|0);
-  const unitId = `ko-${lv}-${String(n).padStart(2, '0')}`;
+  const unitId = `ko-${lv}-01`;
   const lang = (student && student.lang) || 'en';
   if(currentPackLevel !== lv){
     let packWords;
@@ -1300,17 +1329,14 @@ function renderLevelTestResult(){
     <div class="hello">
       <img src="${IMG.excited}" alt="">
       <div>
-        <h2>${L.ltYourStart}</h2>
-        <div class="sub">${escapeHtml(L.ltUnitLine(s.unitN, s.level, name))}</div>
-        <div class="sub">${escapeHtml(L.ltOfCorrect(s.total, t.qs.length))}</div>
+        <h2>${escapeHtml(L.ltStartTitle(name, s.unitN))}</h2>
+        <div class="sub" style="max-width:360px;line-height:1.45">${escapeHtml(L.ltStartBody)}</div>
       </div>
     </div>
     <div class="btn-row" style="flex-direction:column;margin-top:22px">
-      <button class="btn" id="ltHere">${L.ltStartHere}</button>
-      <button class="btn secondary" id="ltOver">${L.ltStartOver}</button>
+      <button class="btn" id="ltStart">${escapeHtml(L.ltStartBtn)}</button>
     </div>`;
-  $('#ltHere').onclick = () => applyLevelPlacement(s.level, s.unitN);
-  $('#ltOver').onclick = () => applyLevelPlacement(s.level, 1);
+  $('#ltStart').onclick = () => applyLevelPlacement(s.level, 1);
 }
 
 /* ---------- 세션 배치 커밋
@@ -1334,7 +1360,7 @@ function journalCard(w){
 async function commitJournal(){
   if(!currentUid || progressLocked || pendingUnits.size === 0) return;
   const units = [...pendingUnits];
-  units.forEach(id=>{ studentProg.u[id] = knownCountForUnit(id); });
+  units.forEach(id=>{ studentProg.u[id] = seenCountForUnit(id); });
   studentProg.cur = currentUnitId;
   const points = bank;
   const batch = D().writeBatch(D().db);
@@ -1355,8 +1381,13 @@ async function commitJournal(){
     await batch.commit();
     pendingUnits.clear();
     localStorage.removeItem(journalKey());
+    saveFailed = false;
   }catch(e){
-    console.error('세션 저장 실패 — 저널을 남겨 다음 실행에서 재시도합니다:', e);
+    saveFailed = true;
+    console.error('세션 저장 실패:', e && e.code, e && e.message,
+      '| units:', [...pendingUnits],
+      '| p sizes:', [...pendingUnits].map(id => id + '=' + Object.keys(packedFromMemory(id).p || {}).length),
+      '| prog.u keys:', Object.keys(studentProg.u || {}).length);
   }
 }
 
@@ -1450,7 +1481,7 @@ async function removeCustomWord(w){
     await D().deleteDoc(customRef(w.wordId));
     pendingUnits.add('custom');
     loadedUnits.add('custom');
-    studentProg.u.custom = knownCountForUnit('custom');
+    studentProg.u.custom = seenCountForUnit('custom');
     await commitJournal();
   }catch(e){ console.error('개인 단어 삭제 실패', e); }
 }
@@ -1464,6 +1495,7 @@ async function handleLoginSuccess(user){
   studentDocExists = false;
   pendingLevelTest = false;
   sheetFailed = false;
+  saveFailed = false;
   levelTest = null;
   // 조회 실패(네트워크·권한)와 문서 없음(미등록)은 전혀 다른 상황이다. 뭉뚱그리지 않는다.
   let invite;
@@ -1566,6 +1598,7 @@ async function doLogout(){
   studentDocExists = false;
   pendingLevelTest = false;
   sheetFailed = false;
+  saveFailed = false;
   levelTest = null;
   if(hadUser){
     try{ await window.fb.signOut(window.fb.auth); } catch(e){ console.error(e); }
@@ -1927,10 +1960,10 @@ function levelSwitchHtml(){
 function unitRowHtml(id, {accent, current, clickable}){
   const locked = !unitUnlocked(id);
   const total = unitTotal(id);
-  const known = knownCountForUnit(id);
+  const seen = seenCountForUnit(id);
   const check = !locked && unitPassed(id) ? ' ✓' : '';
   const emoji = locked ? '🔒' : (id === 'custom' ? '📝' : (current ? '📌' : '📗'));
-  const sub = locked ? L.unitLocked : `${known}/${total}${current && clickable ? ' · ' + L.continueStudy : ''}`;
+  const sub = locked ? L.unitLocked : `${seen}/${total}${current && clickable ? ' · ' + L.continueStudy : ''}`;
   let dataAttr = '';
   if(clickable){
     dataAttr = locked ? `data-locked="${escapeHtml(id)}"` : `data-unit="${escapeHtml(id)}"`;
@@ -1998,6 +2031,8 @@ function homeFooterHtml(){
     <div style="font-weight:700;color:var(--accent-strong)">${escapeHtml(L.feedbackTitle)}</div>
     <div style="color:var(--text-muted);font-size:.85rem;line-height:1.5;margin:8px 14px 14px">${escapeHtml(L.feedbackBody)}</div>
     <a class="btn" id="feedbackMail" style="display:block;text-decoration:none;text-align:center" href="${feedbackMailto()}">${escapeHtml(L.feedbackBtn)}</a>
+    <div id="feedbackAddr" style="color:var(--text-muted);font-size:.82rem;margin-top:10px;user-select:text">contact.blablakorea@gmail.com</div>
+    <button type="button" class="btn secondary" id="feedbackCopy" style="margin-top:8px">${escapeHtml(L.feedbackCopy)}</button>
     ${links.length ? `<div style="margin-top:18px;font-size:.82rem;line-height:1.8">${links.join('<br>')}</div>` : ''}
     <div style="margin-top:14px;font-size:.82rem">
       <a href="${escapeHtml(site)}" target="_blank" rel="noopener noreferrer" id="siteLink">${escapeHtml(L.siteLink)}</a>
@@ -2016,6 +2051,7 @@ function renderHome(){
   app.innerHTML = topbar() + `
     ${(progressLocked && !isGuest) ? `<div class="save-warning">⚠️ ${L.progressSaveOff}</div>` : ''}
     ${sheetFailed ? `<div class="save-warning">⚠️ ${escapeHtml(L.sheetLoadWarn)}</div>` : ''}
+    ${saveFailed ? `<div class="save-warning">⚠️ ${escapeHtml(L.saveFailWarn)}</div>` : ''}
     <div class="hello">
       <img src="${IMG.excited}" alt="">
       <div>
@@ -2046,8 +2082,8 @@ function renderHome(){
 
     <div class="section-title">${L.sectionTest}</div>
     <button class="menu-btn" id="quizBtn">
-      <span class="emoji">🎯</span>
-      <span class="mtext"><b>${L.quiz}</b><span>${L.quizSub}</span></span>
+      <span class="emoji">🎲</span>
+      <span class="mtext"><b>${L.quizAll}</b><span>${L.quizAllSub}</span></span>
       <span class="arrow">→</span>
     </button>
     <button class="menu-btn" id="levelTestBtn">
@@ -2085,7 +2121,7 @@ function renderHome(){
     </button>`}
     ${homeFooterHtml()}
   `;
-  $('#quizBtn').onclick = ()=>startQuiz(currentUnitWords());
+  $('#quizBtn').onclick = ()=>startQuiz(unlockedPoolWords());
   $('#reviewBtn').onclick = ()=>startReview('learned');
   const ltBtn = $('#levelTestBtn');
   if(ltBtn) ltBtn.onclick = ()=>startLevelTest();
@@ -2114,6 +2150,19 @@ function renderHome(){
   app.querySelectorAll('[data-lvl]').forEach(btn=>{
     btn.onclick = ()=>switchPackLevel(btn.dataset.lvl);
   });
+  const copyBtn = $('#feedbackCopy');
+  if(copyBtn){
+    const addr = 'contact.blablakorea@gmail.com';
+    copyBtn.onclick = async ()=>{
+      try{
+        await navigator.clipboard.writeText(addr);
+        copyBtn.textContent = L.feedbackCopied;
+        setTimeout(()=>{ if(copyBtn.isConnected) copyBtn.textContent = L.feedbackCopy; }, 1600);
+      }catch(e){
+        prompt(L.feedbackCopy, addr);
+      }
+    };
+  }
 }
 
 async function renderUnit(unitId){
@@ -2127,13 +2176,13 @@ async function renderUnit(unitId){
   setNav('home');
   await selectUnit(unitId, false);
   const total = unitTotal(unitId);
-  const known = knownCountForUnit(unitId);
+  const seen = seenCountForUnit(unitId);
   app.innerHTML = backBtn() + topbar() + `
     <div class="hello">
       <img src="${IMG.study}" alt="" style="width:70px">
       <div>
         <h2>📗 ${escapeHtml(unitTitle(unitId))}</h2>
-        <div class="sub">${known} / ${total} ${L.statKnown}</div>
+        <div class="sub">${seen} / ${total} ${L.unitSeenLabel}</div>
       </div>
     </div>
     <button class="menu-btn" id="unitCardsBtn">
@@ -2841,7 +2890,7 @@ async function startQuiz(sourceWords){
   if(quizPool(student.words).length < 2 || quizPool(pool).length < 1){ renderNotEnoughWords(); return; }
   const qs = composeSession(pool, SESSION_SIZE, 4);
   if(!qs.length){ renderNotEnoughWords(); return; }
-  session = { mode:'quiz', qs, i:0, correct:0, streak:0, earned:0, answered:false,
+  session = { mode:'quiz', qs, i:0, correct:0, streak:0, earned:0, size: qs.length, answered:false,
               source:pool };
   renderQuizQuestion();
 }
@@ -2948,7 +2997,8 @@ function quizAnswer(btn, chosen, q){
   w.lastReview = now;
   if(!w.firstSeenAt) w.firstSeenAt = now;
   if(correct){
-    session.correct++; session.streak++; session.earned += REWARD;
+    if(!q.scored){ session.correct++; q.scored = true; }
+    session.streak++; session.earned += REWARD;
     if((w.gradedCorrect||0) === 0) dropLearnedCache();
     w.correctStreak++; w.gradedCorrect++;
     if(w.correctStreak >= 6 && !w.masteredAt) w.masteredAt = now;
@@ -3035,7 +3085,7 @@ function renderResult(){
       <div id="captureArea">
         <img src="${img}" alt="">
         <h2>${L.resultTitle(s.correct)}</h2>
-        <div class="score">${L.resultScore(s.correct, s.qs.length)}</div>
+        <div class="score">${L.resultScore(s.correct, s.size || s.qs.length)}</div>
         ${isGuest ? '' : `<div class="earned">💰 +${wonFmt(s.earned)} ${L.earned}</div>`}
       </div>
       <div class="btn-row" style="flex-direction:column">
