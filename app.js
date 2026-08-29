@@ -1,3 +1,7 @@
+/* 배포할 때마다 손으로 올린다. 홈 맨 아래에 보인다.
+   화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다. */
+const APP_VERSION = 'v1.5';
+
 const IMG = {
   bad: "images/bad.png",
   conversation: "images/conversation.png",
@@ -75,6 +79,12 @@ const T = {
     reviewEmptyTitle: "Rien à réviser",
     reviewEmptySub: "Aucun mot à réviser pour l'instant. Ajoute des mots ou attends le prochain cours !",
     reviewEmptyLearned: "Tu n'as pas encore de mot appris. Commence par une unité dans « Apprendre de nouveaux mots ».",
+    wrongMenu: "Mes erreurs ❌",
+    wrongSub: "Les mots que tu as ratés",
+    wrongTitle: (n)=>`${n} mot${n>1?'s':''} à revoir`,
+    wrongCards: "Réviser avec les cartes",
+    wrongQuiz: "Quiz sur ces mots",
+    wrongEmpty: "Aucune erreur pour l'instant. Beau travail !",
     known: "Mémorisés", master: "Maîtrisés", learning: "En cours",
     emptyKnown: "Pas encore de mot mémorisé. Réponds juste 3 fois de suite à un mot pour le débloquer !",
     navHome:"Accueil", navWords:"Mots", navLearned:"Appris", navKnown:"Mémorisés", navHelp:"Aide",
@@ -88,6 +98,11 @@ const T = {
       ["🧠","Révision espacée","Chaque jour, on te ressort les mots au bon moment : 1, 3, 7, 14 puis 30 jours."],
     ],
     switchLang:"English",
+    progSection: "Ta progression",
+    progTitle: (n)=>`📚 Tu as appris ${n} mot${n>1?'s':''}`,
+    langAskTitle: "Dans quelle langue veux-tu voir le sens ?",
+    langAskHint: "Tu pourras changer plus tard dans l'Aide.",
+    studyLangMenu: "Langue des mots",
     newTag: "Nouveau", sentenceTag: "Phrase",
     share: "Partager le résultat",
     logout: "Se déconnecter",
@@ -128,6 +143,7 @@ const T = {
     myWordsSub: "Le vocabulaire que tu as ajouté toi-même",
     emptyMyWords: "Tu n'as pas encore ajouté de mot. Clique sur \"Ajouter un mot\" pour commencer !",
     allDates: "Toutes les dates",
+    dateUnknown: "Avant (date inconnue)",
     editWord: "Modifier le mot",
     editWordSub: "Change le mot, le sens ou la couleur",
     colorLabel: "Couleur (pour t'y retrouver)",
@@ -236,6 +252,12 @@ const T = {
     reviewEmptyTitle: "Nothing to review",
     reviewEmptySub: "No words to review right now. Add some words or wait for your next class!",
     reviewEmptyLearned: "You have no learned words yet. Start with a unit in \"Learn new words\".",
+    wrongMenu: "My mistakes ❌",
+    wrongSub: "Words you got wrong",
+    wrongTitle: (n)=>`${n} word${n===1?'':'s'} to review`,
+    wrongCards: "Review with flashcards",
+    wrongQuiz: "Quiz on these words",
+    wrongEmpty: "No mistakes right now. Nice work!",
     known: "Memorized", master: "Mastered", learning: "Learning",
     emptyKnown: "No memorized words yet. Answer a word right 3 times in a row to unlock it!",
     navHome:"Home", navWords:"Words", navLearned:"Learned", navKnown:"Memorized", navHelp:"Help",
@@ -249,6 +271,11 @@ const T = {
       ["🧠","Spaced review","Each day we resurface words at the right time: 1, 3, 7, 14, then 30 days."],
     ],
     switchLang:"Français",
+    progSection: "Your progress",
+    progTitle: (n)=>`📚 You've learned ${n} word${n===1?'':'s'}`,
+    langAskTitle: "Which language for word meanings?",
+    langAskHint: "You can change this later in Help.",
+    studyLangMenu: "Word language",
     newTag: "New", sentenceTag: "Sentence",
     share: "Share result",
     logout: "Log out",
@@ -289,6 +316,7 @@ const T = {
     myWordsSub: "Vocabulary you've added yourself",
     emptyMyWords: "You haven't added any words yet. Tap \"Add a word\" to get started!",
     allDates: "All dates",
+    dateUnknown: "Earlier (no date)",
     editWord: "Edit word",
     editWordSub: "Change the word, meaning or color",
     colorLabel: "Color (to help you spot it)",
@@ -457,6 +485,7 @@ let studentDocExists = false; // 첫 오픈 로그인은 레벨 테스트 뒤에
 let pendingLevelTest = false;
 let levelTest = null;
 let levelTestCache = null;
+let studyLang = null;   // 'en' | 'fr'. 단어 뜻 언어. UI 언어(loginLang / L)와 별개다
 
 /* 오답 페널티는 폐지했다 (v3 D7) — 틀린 답에서 돈을 깎으면 모르는 단어를 피하게 된다.
    틀린 문항은 돈 대신 세션 끝 재출제 1회로 되갚는다 (§3.4-1). */
@@ -634,14 +663,16 @@ async function getWordId(w){
 }
 
 /* 카드가 없으면 곧 "아직 안 본 단어"다 → 저장하지 않는다.
-   due/interval/ease/state/lapses/firstSeenAt 은 버린다 (SRS 없음). */
-const CARD_FIELDS = ['reps','correctStreak','gradedCorrect','views'];
+   due/interval/ease/state/firstSeenAt 은 버린다 (SRS 없음). */
+const CARD_FIELDS = ['reps','correctStreak','gradedCorrect','views','lapses'];
 function blankCard(){
   return {
     reps: 0,
     correctStreak: 0,
     gradedCorrect: 0,
     views: 0,
+    lapses: 0,
+    learnedDay: 0,
     masteredAt: null         // 유닛 문서 m[] 로만 저장. 메모리 판정용
   };
 }
@@ -744,10 +775,9 @@ async function persistProg(){
 async function switchPackLevel(level){
   const lv = normalizePackLevel(level);
   if(lv === currentPackLevel) return;
-  const lang = (student && student.lang) || 'en';
   let packWords;
   try{
-    packWords = await wordsFromPack(lv, lang);
+    packWords = await wordsFromPack(lv, meaningLang());
   }catch(e){
     console.error('팩 전환 실패:', e);
     alert(L.packLoadError);
@@ -822,10 +852,11 @@ async function startGuest(){
   guestReset();
   session = null; review = null;
   const lang = (loginLang === 'en') ? 'en' : 'fr';
+  studyLang = lang;
   L = T[lang];
   renderVocabLoading(lang);
   try{
-    const words = await wordsFromPack('A', lang);
+    const words = await wordsFromPack('A', meaningLang());
     student = { name: L.guestName, lang, words };
     currentPackLevel = 'A';
     currentUnitId = DEFAULT_OPEN_UNIT;
@@ -841,6 +872,7 @@ async function startGuest(){
 
 function exitGuest(){
   isGuest = false;
+  studyLang = null;
   dropLearnedCache();
   student = null; session = null; review = null; levelTest = null;
   bank = 0; bestStreak = 0;
@@ -1014,8 +1046,22 @@ function unitTitle(id){
   return id;
 }
 
+/* [reps, correctStreak, gradedCorrect, views, lapses, learnedDay]
+   learnedDay = 처음 채점된 날의 「1970-01-01 이후 일수」. 0 이면 아직 없음.
+   옛 문서는 길이 4 라서 c[4]·c[5] 가 undefined 다. |0 이 0 으로 만든다. */
 function cardPayload(w){
-  return [w.reps|0, w.correctStreak|0, w.gradedCorrect|0, w.views|0];
+  return [w.reps|0, w.correctStreak|0, w.gradedCorrect|0, w.views|0,
+          w.lapses|0, w.learnedDay|0];
+}
+
+function dayToISO(day){
+  return new Date(day * 86400000).toISOString().slice(0, 10);
+}
+
+function studyDateOf(w){
+  if(w.learnedDay) return dayToISO(w.learnedDay);
+  const d = String(w.date || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
 }
 
 function packedFromMemory(unitId){
@@ -1035,7 +1081,7 @@ function newStudentDoc(){
     profile: {
       displayName: student.name,
       uiLang: student.lang,
-      meaningLang: student.lang,     // 지금은 같은 값. v1.1에서 분리된다 (D13)
+      meaningLang: studyLang || student.lang,
       createdAt: D().serverTimestamp()
       // role 은 클라이언트가 쓰지 않는다. 브라우저에서 admin 으로 바꿀 수 있다.
       // 역할이 필요해지면 admin SDK 또는 커스텀 클레임으로 넣는다.
@@ -1061,6 +1107,8 @@ function applyCard(w, c){
     w.correctStreak = c[1]|0;
     w.gradedCorrect = c[2]|0;
     w.views = c[3]|0;
+    w.lapses = c[4]|0;
+    w.learnedDay = c[5]|0;
     return;
   }
   if(c && typeof c === 'object'){
@@ -1167,7 +1215,121 @@ function unitsInLevel(level){
 }
 
 function meaningLang(){
+  if(studyLang === 'fr' || studyLang === 'en') return studyLang;
   return ((student && student.lang) === 'fr' || L === T.fr) ? 'fr' : 'en';
+}
+
+function packWordCount(level){
+  const pack = packCache[normalizePackLevel(level)];
+  if(!pack) return 0;
+  let n = 0;
+  (pack.units || []).forEach(u => { n += (u.words || []).length; });
+  return n;
+}
+
+function wordPackLevel(w){
+  const m = String(unitIdForWord(w) || '').match(/^ko-([ABC])-/);
+  return m ? m[1] : '';
+}
+
+function progressBarsHtml(){
+  const row = lv => `<div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+      <span style="flex:0 1 8.2rem;min-width:0;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lv} · ${escapeHtml(lv==='A'?L.levelA:lv==='B'?L.levelB:L.levelC)}</span>
+      <div class="progress"><i id="progFill${lv}"></i></div>
+      <span id="progNum${lv}" style="flex:none;font-size:.72rem;color:var(--text-muted);min-width:4.6rem;text-align:right"></span>
+    </div>`;
+  return `<div class="section-title">${L.progSection}</div>
+    <div class="card" id="progCard" style="padding:16px 16px 12px;margin-bottom:14px">
+      <div id="progTitle" style="font-weight:700;margin-bottom:10px">${escapeHtml(L.progTitle(stats().learned))}</div>
+      ${row('A')}${row('B')}${row('C')}
+    </div>`;
+}
+
+function fillProgBars(list){
+  const by = { A: 0, B: 0, C: 0 };
+  (list || []).forEach(w => {
+    const lv = wordPackLevel(w);
+    if(by[lv] !== undefined) by[lv]++;
+  });
+  const title = $('#progTitle');
+  if(title) title.textContent = L.progTitle((list || []).length);
+  ['A','B','C'].forEach(lv => {
+    const tot = packWordCount(lv);
+    const n = by[lv];
+    const el = $('#progFill'+lv);
+    const num = $('#progNum'+lv);
+    if(el) el.style.width = tot ? (Math.min(100, n / tot * 100) + '%') : '0%';
+    if(num) num.textContent = tot ? (n + '/' + tot) : '';
+  });
+}
+
+async function persistStudyLang(){
+  if(!currentUid || progressLocked || isGuest) return;
+  if(!studentDocExists){
+    await D().setDoc(studentRef(), newStudentDoc());
+    studentDocExists = true;
+    return;
+  }
+  await D().updateDoc(studentRef(), {
+    'profile.meaningLang': studyLang,
+    lastUpdated: D().serverTimestamp()
+  });
+}
+
+async function rebuildPackMeanings(){
+  const lv = currentPackLevel || 'A';
+  const prev = {};
+  (student.words || []).forEach(w => {
+    if(isPackUnit(unitIdForWord(w))) prev[w.wordId] = w;
+  });
+  const packWords = await wordsFromPack(lv, meaningLang());
+  packWords.forEach(w => {
+    const o = prev[w.wordId];
+    if(!o) return;
+    w.reps = o.reps; w.correctStreak = o.correctStreak; w.gradedCorrect = o.gradedCorrect;
+    w.views = o.views; w.lapses = o.lapses; w.learnedDay = o.learnedDay;
+    w.masteredAt = o.masteredAt;
+  });
+  const keep = (student.words || []).filter(w => w.source === 'custom' || !isPackUnit(unitIdForWord(w)));
+  student.words = packWords.concat(keep);
+  loadedUnits = new Set([...loadedUnits].filter(id => !isPackUnit(id)));
+  const seenU = new Set(packWords.map(w => unitIdForWord(w)));
+  seenU.forEach(id => loadedUnits.add(id));
+  dropLearnedCache();
+  if(currentUid && !progressLocked && currentUnitId) await loadUnit(currentUnitId);
+}
+
+function renderStudyLangAsk(){
+  botnav.classList.add('hidden');
+  document.onkeydown = null;
+  app.innerHTML = `
+    <div class="login">
+      <img src="${IMG.excited}" alt="">
+      <h1>${escapeHtml(L.langAskTitle)}</h1>
+      <div class="btn-row" style="flex-direction:column;max-width:280px;margin:22px auto 0">
+        <button class="btn" id="pickEn">English</button>
+        <button class="btn secondary" id="pickFr" style="margin-top:8px">Français</button>
+      </div>
+      <p style="color:var(--text-muted);margin-top:18px">${escapeHtml(L.langAskHint)}</p>
+    </div>`;
+  $('#pickEn').onclick = ()=>chooseStudyLang('en');
+  $('#pickFr').onclick = ()=>chooseStudyLang('fr');
+}
+
+async function chooseStudyLang(lang){
+  studyLang = (lang === 'fr') ? 'fr' : 'en';
+  try{ await persistStudyLang(); }catch(e){ console.error('학습 언어 저장 실패:', e); }
+  try{ await rebuildPackMeanings(); }catch(e){
+    console.error('학습 언어 팩 전환 실패:', e);
+    alert(L.packLoadError);
+    return;
+  }
+  if(pendingLevelTest){
+    pendingLevelTest = false;
+    startLevelTest();
+    return;
+  }
+  renderHome();
 }
 
 async function loadLevelTestItems(){
@@ -1214,11 +1376,10 @@ async function persistPlacement(){
 async function applyLevelPlacement(level, unitN){
   const lv = normalizePackLevel(level);
   const unitId = `ko-${lv}-01`;
-  const lang = (student && student.lang) || 'en';
   if(currentPackLevel !== lv){
     let packWords;
     try{
-      packWords = await wordsFromPack(lv, lang);
+      packWords = await wordsFromPack(lv, meaningLang());
     }catch(e){
       console.error('레벨 테스트 팩 전환 실패:', e);
       alert(L.packLoadError);
@@ -1497,6 +1658,7 @@ async function handleLoginSuccess(user){
   sheetFailed = false;
   saveFailed = false;
   levelTest = null;
+  studyLang = null;
   // 조회 실패(네트워크·권한)와 문서 없음(미등록)은 전혀 다른 상황이다. 뭉뚱그리지 않는다.
   let invite;
   try{
@@ -1542,7 +1704,12 @@ async function handleLoginSuccess(user){
     studentSnap = await D().getDoc(studentRef());
     const savedLvl = studentSnap.exists() ? (studentSnap.data().prog || {}).lvl : 'A';
     currentPackLevel = normalizePackLevel(savedLvl);
-    words = await wordsFromPack(currentPackLevel, lang);
+    studyLang = null;
+    if(studentSnap.exists()){
+      const ml = ((studentSnap.data().profile) || {}).meaningLang;
+      if(ml === 'fr' || ml === 'en') studyLang = ml;
+    }
+    words = await wordsFromPack(currentPackLevel, meaningLang());
   }catch(e){
     console.error('① 공용 팩 로딩 실패:', e);
     renderPackLoadError(lang, false);
@@ -1569,6 +1736,10 @@ async function handleLoginSuccess(user){
     console.error('② 진도 불러오기 실패 (Firestore 문제 — 앱은 열지만 저장을 잠급니다):', e);
     progressLocked = true;
     bank = 0; // 실제 저장은 잠겨 있으므로 화면 표시만 0. 기존 데이터는 덮어쓰지 않음
+  }
+  if(!studyLang){
+    renderStudyLangAsk();
+    return;
   }
   if(pendingLevelTest){
     pendingLevelTest = false;
@@ -1600,6 +1771,7 @@ async function doLogout(){
   sheetFailed = false;
   saveFailed = false;
   levelTest = null;
+  studyLang = null;
   if(hadUser){
     try{ await window.fb.signOut(window.fb.auth); } catch(e){ console.error(e); }
     // onAuthStateChanged가 renderLogin() 처리
@@ -1610,6 +1782,7 @@ async function doLogout(){
 
 /* ---------- 앱 시작 (Firebase 준비된 뒤) ---------- */
 function initApp(){
+  console.info('Voca Bank', APP_VERSION);
   /* ?debugfs=1 일 때만 호출 횟수를 센다. window.__fs 로 확인. */
   if(window.fb && !window.fb.__fsWrapped && new URLSearchParams(location.search).has('debugfs')){
     const fb = window.fb;
@@ -1637,7 +1810,7 @@ function initApp(){
     else { currentUserEmail = null; currentUid = null; currentPackId = null; currentPackLevel = null;
            currentUnitId = null; studentProg = { cur: null, u: {}, lvl: null };
            loadedUnits = new Set(); sheetUnitsLoaded = false; dropLearnedCache(); customWordsLoaded = false; pendingUnits = new Set();
-           isGuest = false; guestReset(); renderLogin(); }
+           isGuest = false; studyLang = null; guestReset(); renderLogin(); }
   });
 }
 
@@ -1892,7 +2065,6 @@ async function buildLearnedCache(){
       return current;
     }
     const curLv = normalizePackLevel(currentPackLevel);
-    const lang = (student && student.lang) || 'en';
     const extra = [];
     const seen = new Set(current.map(w => w.wordId));
     for(const lv of ['A','B','C']){
@@ -1902,7 +2074,7 @@ async function buildLearnedCache(){
       if(!unitIds.length) continue;          // 이 레벨은 쓴 적이 없다. 팩을 받지 않는다
       let packWords;
       try{
-        packWords = await wordsFromPack(lv, lang);
+        packWords = await wordsFromPack(lv, meaningLang());
       }catch(e){
         console.error('learned 팩 로딩 실패:', e);
         continue;
@@ -2037,7 +2209,7 @@ function homeFooterHtml(){
     <div style="margin-top:14px;font-size:.82rem">
       <a href="${escapeHtml(site)}" target="_blank" rel="noopener noreferrer" id="siteLink">${escapeHtml(L.siteLink)}</a>
     </div>
-    <div style="color:var(--text-muted);font-size:.72rem;margin-top:12px;line-height:1.7">© 2026 Jonghyuk Lee · Blabla Korea</div>
+    <div style="color:var(--text-muted);font-size:.72rem;margin-top:12px;line-height:1.7">© 2026 Jonghyuk Lee · Blabla Korea · ${APP_VERSION}</div>
   </div>`;
 }
 
@@ -2070,6 +2242,7 @@ function renderHome(){
       <div class="stat"><b>${bestStreak}🔥</b><span>${L.statStreak}</span></div>
     </div>
 
+    ${progressBarsHtml()}
     ${levelSwitchHtml()}
     ${unitListHtml()}
 
@@ -2077,6 +2250,12 @@ function renderHome(){
     <button class="menu-btn" id="reviewBtn">
       <span class="emoji">🃏</span>
       <span class="mtext"><b>${L.review}</b><span>${L.reviewSub}</span></span>
+      <span class="arrow">→</span>
+    </button>
+    <button class="menu-btn" id="wrongBtn">
+      <span class="emoji">❌</span>
+      <span class="mtext"><b>${L.wrongMenu}</b><span>${L.wrongSub}</span></span>
+      ${wrongWords().length ? `<span class="badge">${wrongWords().length}</span>` : ''}
       <span class="arrow">→</span>
     </button>
 
@@ -2123,6 +2302,7 @@ function renderHome(){
   `;
   $('#quizBtn').onclick = ()=>startQuiz(unlockedPoolWords());
   $('#reviewBtn').onclick = ()=>startReview('learned');
+  $('#wrongBtn').onclick = ()=>renderWrong();
   const ltBtn = $('#levelTestBtn');
   if(ltBtn) ltBtn.onclick = ()=>startLevelTest();
   $('#wordsBtn').onclick = ()=>renderWords();
@@ -2135,10 +2315,17 @@ function renderHome(){
   }
   $('#statLearned').onclick = renderLearned;
   $('#statKnown').onclick = renderKnown;
-  if(!learnedCache){
-    buildLearnedCache().then(list=>{
-      const el = $('#statLearned b');
-      if(el) el.textContent = String(list.length);
+  const paintProg = list => {
+    const el = $('#statLearned b');
+    if(el) el.textContent = String(list.length);
+    fillProgBars(list);
+  };
+  const packsReady = Promise.all(['A','B','C'].map(lv => loadPack(lv).catch(()=>null)));
+  if(learnedCache){
+    packsReady.then(()=>paintProg(learnedCache)).catch(()=>{});
+  } else {
+    Promise.all([buildLearnedCache(), packsReady]).then(([list])=>{
+      paintProg(list);
     }).catch(e=>console.error(e));
   }
   app.querySelectorAll('[data-unit]').forEach(btn=>{
@@ -2218,19 +2405,15 @@ async function renderWords(selectedDate = "all"){
   botnav.classList.remove('hidden');
   setNav('words');
   await buildLearnedCache();
-  const units = listUnitIds().filter(id => {
-    if(id === 'custom') return wordsInUnit(id).length > 0;
-    if(!isPackUnit(id)) return wordsInUnit(id).length > 0;   // 시트 날짜 유닛은 항상
-    return wordsInUnit(id).some(isStudied);                  // 팩 유닛은 학습한 것만
-  });
-  const byUnit = {};
-  units.forEach(id => {
-    const list = wordsInUnit(id);
-    byUnit[id] = isPackUnit(id) ? list.filter(isStudied) : list;
+  const studied = (student.words || []).filter(isStudied);
+  const byDate = {};
+  studied.forEach(w=>{
+    const k = studyDateOf(w) || '';
+    (byDate[k] = byDate[k] || []).push(w);
   });
   let html = backBtn() + topbar() + `<h2 style="margin:6px 2px 4px">📖 ${L.words}</h2>
     <div class="sub" style="color:var(--text-muted);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>`;
-  if(!units.length){
+  if(!studied.length){
     html += `<div class="card" style="text-align:center;color:var(--text-muted)">
       <img src="${IMG.grumpy}" style="width:120px;margin-bottom:10px" alt="">
       <p>${L.emptyStudied}</p></div>`;
@@ -2238,16 +2421,22 @@ async function renderWords(selectedDate = "all"){
     wireBackBtn();
     return;
   }
-  const shown = selectedDate === 'all' ? units : units.filter(id => id === selectedDate);
+  const dated = Object.keys(byDate).filter(k => k).sort().reverse();
+  const keys = byDate[''] ? dated.concat(['']) : dated;
+  const selKey = selectedDate === '__unknown__' ? '' : selectedDate;
+  const shown = selectedDate === 'all' ? keys : keys.filter(k => k === selKey);
+  const optVal = k => k || '__unknown__';
+  const optLabel = k => k ? `${fmtDate(k)} · ${byDate[k].length}` : `${L.dateUnknown} · ${byDate[k].length}`;
   html += `<select id="dateFilter" style="width:100%;margin:10px 0 2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;font-size:1rem;color:var(--text);font-family:inherit;cursor:pointer">
       <option value="all">📅 ${L.allDates}</option>
-      ${units.map(id=>`<option value="${escapeHtml(id)}" ${id===selectedDate?'selected':''}>${escapeHtml(unitTitle(id))} · ${byUnit[id].length}</option>`).join('')}
+      ${keys.map(k=>`<option value="${escapeHtml(optVal(k))}" ${optVal(k)===selectedDate?'selected':''}>${escapeHtml(optLabel(k))}</option>`).join('')}
     </select>`;
-  shown.forEach(id=>{
-    const list = byUnit[id] || [];
+  shown.forEach(k=>{
+    const list = byDate[k] || [];
+    const title = k ? `📅 ${escapeHtml(fmtDate(k))}` : escapeHtml(L.dateUnknown);
     html += `<div class="day-block">
-      <div class="day-head">📗 ${escapeHtml(unitTitle(id))} <span class="count">· ${list.length}</span></div>`;
-    list.forEach(w=>{ html += wordRowHtml(w); });
+      <div class="day-head">${title} <span class="count">· ${list.length}</span></div>`;
+    list.forEach(w=>{ html += wordRowHtml(w, false, false, true); });
     html += `</div>`;
   });
   app.innerHTML = html;
@@ -2278,7 +2467,7 @@ function wordLevelBadge(w){
   return m ? m[1] : '';
 }
 
-function wordRowHtml(w, controls=false, withLevel){
+function wordRowHtml(w, controls=false, withLevel, withUnit=false){
   const del = (w.source==='custom')
     ? `<button class="word-del" data-del="${escapeHtml(w.wordId)}" title="${L.deleteWord}">✕</button>`
     : '';
@@ -2298,11 +2487,16 @@ function wordRowHtml(w, controls=false, withLevel){
   const level = withLevel ? wordLevelBadge(w) : '';
   const levelTag = level ? `<span class="tag custom">${escapeHtml(level)}</span>` : '';
   const customTag = (!withLevel && w.source==='custom') ? `<span class="tag custom">${L.tagCustom}</span>` : '';
+  let unitTag = '';
+  if(withUnit){
+    const m = String(unitIdForWord(w)).match(/^ko-([ABC])-(\d+)$/);
+    if(m) unitTag = `<span class="tag" style="background:var(--surface-sunken);color:var(--text-muted)">${escapeHtml(m[1]+'·'+parseInt(m[2],10))}</span>`;
+  }
   return `<div class="word-row"${colorStyle}>
     ${move}
     <span class="ko kr">${escapeHtml(w.ko)}</span>
     <span class="mean">${escapeHtml(w.mean)}</span>
-    ${levelTag}${customTag}
+    ${levelTag}${customTag}${unitTag}
     <span class="tag ${statusTag(w).cls}">${statusTag(w).txt}</span>
     ${edit}${del}
   </div>`;
@@ -2637,6 +2831,7 @@ function renderHelp(){
       <span class="mtext"><b>${title}</b><span>${desc}</span></span></div>`;
   });
   html += `<button class="btn ghost" id="switchLang" style="margin-top:16px">🌐 ${L.switchLang}</button>`;
+  html += `<button class="btn ghost" id="studyLangBtn" style="margin-top:10px">📚 ${escapeHtml(L.studyLangMenu)} · ${meaningLang()==='fr'?'Français':'English'}</button>`;
   html += isGuest
     ? `<button class="btn" id="logoutBtn" style="margin-top:10px">🔐 ${L.guestLoginToSave}</button>`
     : `<button class="btn chili" id="logoutBtn" style="margin-top:10px">🚪 ${L.logout}</button>`;
@@ -2645,6 +2840,10 @@ function renderHelp(){
   app.innerHTML = html;
   wireBackBtn();
   $('#switchLang').onclick = ()=>{ L = (L===T.fr)?T.en:T.fr; renderHelp(); };
+  $('#studyLangBtn').onclick = ()=>{
+    const next = meaningLang()==='fr' ? 'en' : 'fr';
+    chooseStudyLang(next);
+  };
   $('#logoutBtn').onclick = doLogout;
 }
 
@@ -2654,11 +2853,18 @@ function renderHelp(){
    - 문장은 제외하고 단어만 (퀴즈와 동일 기준)
    ===================================================================== */
 
+function wrongWords(){
+  return (student.words || []).filter(w =>
+    (w.lapses|0) > 0 && (w.correctStreak|0) < 3 &&
+    w.type !== 'sentence' && w.ko && w.mean);
+}
+
 function reviewPool(mode){
   if(mode === 'unit'){
     // 유닛 학습용 — 진도와 무관하게 그 유닛 전체를 보여준다
     return currentUnitWords().filter(w=>w.type!=="sentence" && w.ko && w.mean);
   }
+  if(mode === 'wrong') return wrongWords();
   // 'learned' — 한 번이라도 맞힌 단어만 복습한다
   return (student.words || []).filter(w =>
     (w.gradedCorrect||0) > 0 && w.type!=="sentence" && w.ko && w.mean);
@@ -2667,7 +2873,7 @@ function reviewPool(mode){
 async function startReview(mode='learned'){
   if(guestWallDue()){ renderGuestWall(()=>startReview(mode)); return; }
   if(currentUnitId === 'custom') await ensureCustomWords();
-  if(mode === 'learned') await ensureSheetUnits();
+  if(mode === 'learned' || mode === 'wrong') await ensureSheetUnits();
   document.onkeydown = null;
   session = null;
   const cards = shuffle(reviewPool(mode));
@@ -2689,14 +2895,15 @@ function countCardView(w){
 function renderReviewEmpty(mode){
   botnav.classList.add('hidden');
   review = null;
-  const sub = mode === 'learned' ? L.reviewEmptyLearned : L.reviewEmptySub;
+  const sub = mode === 'wrong' ? L.wrongEmpty : mode === 'learned' ? L.reviewEmptyLearned : L.reviewEmptySub;
+  const img = mode === 'wrong' ? IMG.excited : IMG.surprised;
   app.innerHTML = backBtn() + topbar() + `
     <div class="result">
-      <img src="${IMG.surprised}" alt="">
-      <h2>${L.reviewEmptyTitle}</h2>
+      <img src="${img}" alt="">
+      <h2>${mode === 'wrong' ? L.wrongMenu : L.reviewEmptyTitle}</h2>
       <div class="score" style="max-width:380px;margin:0 auto 18px">${sub}</div>
       <div class="btn-row" style="flex-direction:column">
-        ${isGuest ? '' : `<button class="btn" id="addNowBtn">➕ ${L.addWord}</button>`}
+        ${isGuest || mode === 'wrong' ? '' : `<button class="btn" id="addNowBtn">➕ ${L.addWord}</button>`}
         <button class="btn secondary" id="homeBtn">${L.home}</button>
       </div>
     </div>`;
@@ -2704,6 +2911,51 @@ function renderReviewEmpty(mode){
   const addNow = $('#addNowBtn');
   if(addNow) addNow.onclick = ()=>renderAddWord();
   $('#homeBtn').onclick = ()=>renderHome();
+}
+
+async function renderWrong(){
+  botnav.classList.remove('hidden');
+  document.onkeydown = null;
+  review = null;
+  setNav('home');
+  await ensureSheetUnits();
+  const list = wrongWords();
+  if(!list.length){
+    app.innerHTML = backBtn() + topbar() + `
+      <div class="result">
+        <img src="${IMG.excited}" alt="">
+        <h2>${L.wrongMenu}</h2>
+        <div class="score" style="max-width:380px;margin:0 auto 18px">${L.wrongEmpty}</div>
+        <div class="btn-row" style="flex-direction:column">
+          <button class="btn secondary" id="homeBtn">${L.home}</button>
+        </div>
+      </div>`;
+    wireBackBtn();
+    $('#homeBtn').onclick = ()=>renderHome();
+    return;
+  }
+  let html = backBtn() + topbar() + `
+    <div class="hello">
+      <div>
+        <h2>${L.wrongMenu}</h2>
+        <div class="sub">${escapeHtml(L.wrongTitle(list.length))}</div>
+      </div>
+    </div>
+    <button class="menu-btn" id="wrongCardsBtn">
+      <span class="emoji">🃏</span>
+      <span class="mtext"><b>${L.wrongCards}</b><span>${L.reviewSub}</span></span>
+      <span class="arrow">→</span>
+    </button>
+    <button class="menu-btn" id="wrongQuizBtn">
+      <span class="emoji">🎯</span>
+      <span class="mtext"><b>${L.wrongQuiz}</b><span>${L.quizSub}</span></span>
+      <span class="arrow">→</span>
+    </button>`;
+  list.forEach(w => { html += wordRowHtml(w); });
+  app.innerHTML = html;
+  wireBackBtn();
+  $('#wrongCardsBtn').onclick = ()=>startReview('wrong');
+  $('#wrongQuizBtn').onclick = ()=>startQuiz(wrongWords());
 }
 
 function renderReview(){
@@ -2996,8 +3248,9 @@ function quizAnswer(btn, chosen, q){
   w.reps++;
   w.lastReview = now;
   if(!w.firstSeenAt) w.firstSeenAt = now;
+  if(!w.learnedDay) w.learnedDay = Math.floor(Date.now() / 86400000);
   if(correct){
-    if(!q.scored){ session.correct++; q.scored = true; }
+    if(!q.isRetry && !q.scored){ session.correct++; q.scored = true; }
     session.streak++; session.earned += REWARD;
     if((w.gradedCorrect||0) === 0) dropLearnedCache();
     w.correctStreak++; w.gradedCorrect++;
