@@ -1,6 +1,6 @@
 /* 배포할 때마다 손으로 올린다. 홈 맨 아래에 보인다.
    화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다. */
-const APP_VERSION = 'v1.5';
+const APP_VERSION = 'v1.6';
 
 const IMG = {
   bad: "images/bad.png",
@@ -201,6 +201,8 @@ const T = {
     feedbackCopied: "Copié !",
     unitPickHint: "Touche l'unité pour changer d'unité.",
     unitPickTitle: "Unités",
+    lessonSection: "Mots du cours",
+    lessonPickTitle: "Tous les cours",
     unitMoreLocked: (n)=>`${n} unité${n>1?'s':''} verrouillée${n>1?'s':''}`,
   },
   en: {
@@ -374,6 +376,8 @@ const T = {
     feedbackCopied: "Copied!",
     unitPickHint: "Tap the unit to switch units.",
     unitPickTitle: "Units",
+    lessonSection: "Class words",
+    lessonPickTitle: "All lessons",
     unitMoreLocked: (n)=>`${n} more locked`,
   }
 };
@@ -502,25 +506,31 @@ const LEGAL_URL = {
    전 학생의 이메일·이름·개인 시트 주소가 그대로 들어 있었다.
    이제 이메일 평문은 어디에도 두지 않고 sha256(trim·소문자) 해시를 문서 ID로 쓴다. */
 
-// 콤마가 포함된 필드("...")도 안전하게 처리하는 CSV 한 줄 파서
-function parseCsvLine(line){
-  const result = [];
-  let cur = '', inQuotes = false;
-  for(let i=0;i<line.length;i++){
-    const c = line[i];
+/* 콤마("...")와 셀 안 줄바꿈을 모두 처리하는 CSV 파서. 행 배열의 배열을 돌려준다.
+   줄 단위로 먼저 자르면 안 된다 — 시트 셀에서 Alt+Enter 로 줄을 바꾸면
+   ("싸울래요?\n밖으로 나와요!") 행 하나가 두 조각으로 쪼개져 양쪽 다 버려진다.
+   아리 시트에서 실제로 이렇게 3단어가 사라져 있었다. */
+function parseCsv(text){
+  const rows = [];
+  let row = [], cur = '', inQuotes = false;
+  const src = String(text).replace(/\r\n/g, '\n');
+  for(let i=0;i<src.length;i++){
+    const c = src[i];
     if(inQuotes){
       if(c === '"'){
-        if(line[i+1] === '"'){ cur += '"'; i++; }
+        if(src[i+1] === '"'){ cur += '"'; i++; }
         else inQuotes = false;
       } else cur += c;
     } else {
       if(c === '"') inQuotes = true;
-      else if(c === ','){ result.push(cur); cur=''; }
+      else if(c === ','){ row.push(cur); cur=''; }
+      else if(c === '\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
       else cur += c;
     }
   }
-  result.push(cur);
-  return result.map(s=>s.trim());
+  row.push(cur);
+  rows.push(row);
+  return rows.map(r => r.map(s => s.trim()));
 }
 
 async function sha256Hex(str){
@@ -561,12 +571,10 @@ async function fetchStudentVocab(url, retries=2){
       if(!isAllowedVocabUrl(res.url || url)) throw new Error('단어 CSV 주소가 허용 목록 밖입니다');
       if(!res.ok) throw new Error('단어 CSV fetch 실패: HTTP '+res.status);
       const text = await res.text();
-      const lines = text.trim().split(/\r?\n/).slice(1); // 헤더(날짜,한국어,발음,뜻,예문,예문뜻,카테고리,품사,타입) 제거
+      const rows = parseCsv(text).slice(1); // 헤더(날짜,한국어,발음,뜻,예문,예문뜻,카테고리,품사,타입) 제거
       const words = [];
-      lines.forEach(line=>{
-        if(!line.trim()) return; // 빈 줄 건너뛰기
-        const cols = parseCsvLine(line);
-        if(cols.length < 9) return; // 컬럼 개수 안 맞으면 건너뛰기
+      rows.forEach(cols=>{
+        if(cols.length < 9) return; // 컬럼 개수 안 맞으면 건너뛰기 (빈 줄도 여기서 걸린다)
         const [date, ko, pron, mean, example, exampleMean, category, pos, type] = cols;
         if(!ko || !mean) return; // 핵심 필드 비어있으면 건너뛰기
         if(type !== 'word' && type !== 'sentence') return; // 타입 값 이상하면 건너뛰기
@@ -764,7 +772,7 @@ function lastUnitForLevel(level){
 
 async function persistProg(){
   if(!currentUid || progressLocked) return;
-  studentProg.cur = currentUnitId;
+  studentProg.cur = packCur();
   if(currentPackLevel) studentProg.lvl = currentPackLevel;
   await D().updateDoc(studentRef(), {
     prog: studentProg,
@@ -997,6 +1005,25 @@ function isPackUnit(id){
   return /^ko-[ABC]-\d+$/.test(String(id||''));
 }
 
+/* 수업 날짜 유닛인가 */
+function isSheetUnit(id){
+  return /^sheet-\d{4}-\d{2}-\d{2}$/.test(String(id||''));
+}
+
+/* 수업 날짜 유닛 목록. 최신 수업이 앞에 온다 */
+function sheetUnitIds(){
+  return listUnitIds().filter(isSheetUnit).sort().reverse();
+}
+
+/* studentProg.cur 에 넣어도 되는 값. 팩 유닛만 허용한다.
+   restoreProgress 가 팩 유닛이 아닌 cur 을 보면 레벨 테스트를 다시 띄우므로,
+   수업 날짜 유닛을 그대로 저장하면 학생이 로그인할 때마다 21문항을 다시 푼다. */
+function packCur(){
+  if(isPackUnit(currentUnitId)) return currentUnitId;
+  if(isPackUnit(studentProg.cur)) return studentProg.cur;
+  return lastUnitForLevel(currentPackLevel || 'A');
+}
+
 /* 정렬된 팩 유닛 id. 해금 계산의 기준 순서다 */
 function orderedUnitIds(){
   return listUnitIds().filter(isPackUnit);
@@ -1021,6 +1048,7 @@ function unlockedCount(){
 
 function unitUnlocked(unitId){
   if(unitId === 'custom') return true;
+  if(isSheetUnit(unitId)) return true;   // 수업에서 이미 배운 단어다. 잠글 이유가 없다
   const ids = orderedUnitIds();
   const i = ids.indexOf(unitId);
   return i >= 0 && i < unlockedCount();
@@ -1093,7 +1121,7 @@ function newStudentDoc(){
     },
     packs: currentPackId ? [currentPackId] : [],
     prog: {
-      cur: currentUnitId || defaultUnitId(),
+      cur: packCur() || defaultUnitId(),
       u: (studentProg && studentProg.u) || {},
       ...(currentPackLevel ? { lvl: currentPackLevel } : {})
     },
@@ -1196,7 +1224,8 @@ async function loadUnit(unitId){
 
 async function selectUnit(unitId, render=true){
   currentUnitId = unitId;
-  studentProg.cur = unitId;
+  // 수업 날짜 유닛은 「지금 보는 곳」일 뿐 「팩 진도」가 아니다. cur 은 팩 유닛으로 유지한다
+  if(isPackUnit(unitId)) studentProg.cur = unitId;
   await loadUnit(unitId);
   if(render) renderHome();
 }
@@ -1522,7 +1551,7 @@ async function commitJournal(){
   if(!currentUid || progressLocked || pendingUnits.size === 0) return;
   const units = [...pendingUnits];
   units.forEach(id=>{ studentProg.u[id] = seenCountForUnit(id); });
-  studentProg.cur = currentUnitId;
+  studentProg.cur = packCur();
   const points = bank;
   const batch = D().writeBatch(D().db);
   units.forEach(id=>{
@@ -2155,15 +2184,39 @@ function unitRowHtml(id, {accent, current, clickable}){
 }
 
 function unitListHtml(){
-  const ids = listUnitIds().filter(id => id !== 'custom');
-  const cur = (currentUnitId && currentUnitId !== 'custom') ? currentUnitId : ids[0];
+  // 「새 단어 배우기」 자리는 항상 팩 유닛이다. 수업 날짜 유닛을 보고 온 직후에도
+  // 여기가 날짜로 바뀌면 안 된다 — 그건 아래 수업 단어 카드가 맡는다
+  const ids = orderedUnitIds();
+  const cur = isPackUnit(currentUnitId) ? currentUnitId
+            : (isPackUnit(studentProg.cur) ? studentProg.cur : ids[0]);
   if(!cur) return '';
   return `<div class="section-title">${L.unitSection}</div>` +
     unitRowHtml(cur, {accent:true, current:true, clickable:true}) +
     `<div style="color:var(--text-muted);font-size:.78rem;margin:6px 14px 14px;line-height:1.45">${escapeHtml(L.unitPickHint)}</div>`;
 }
 
+/* 수업 단어 입구. 팩 해금과 무관하게 늘 열려 있다 (이미 수업에서 배운 단어다).
+   최신 수업 한 줄만 홈에 두고, 지난 수업은 그 안의 날짜 목록에서 고른다. */
+function lessonCardHtml(){
+  const ids = sheetUnitIds();
+  if(!ids.length) return '';
+  return `<div class="section-title">${L.lessonSection}</div>` +
+    unitRowHtml(ids[0], {accent:true, current:true, clickable:true});
+}
+
+/* 수업 날짜 목록. renderUnit 안에서 팩 유닛 선택기 대신 이걸 쓴다 */
+function lessonPickerHtml(viewingId){
+  const ids = sheetUnitIds();
+  if(ids.length < 2) return '';
+  const rows = ids.map(id=>{
+    const isCurrent = id === viewingId;
+    return unitRowHtml(id, {accent:isCurrent, current:isCurrent, clickable:!isCurrent});
+  }).join('');
+  return `<div class="section-title">${L.lessonPickTitle}</div>` + rows;
+}
+
 function unitPickerHtml(viewingId){
+  if(isSheetUnit(viewingId)) return lessonPickerHtml(viewingId);
   const ids = orderedUnitIds();
   const nUnlock = unlockedCount();
   const unlocked = ids.slice(0, nUnlock);
@@ -2245,6 +2298,7 @@ function renderHome(){
     ${progressBarsHtml()}
     ${levelSwitchHtml()}
     ${unitListHtml()}
+    ${lessonCardHtml()}
 
     <div class="section-title">${L.sectionPlay}</div>
     <button class="menu-btn" id="reviewBtn">
@@ -2405,15 +2459,19 @@ async function renderWords(selectedDate = "all"){
   botnav.classList.remove('hidden');
   setNav('words');
   await buildLearnedCache();
-  const studied = (student.words || []).filter(isStudied);
+  /* 수업 단어(시트 날짜)와 내가 추가한 단어는 아직 안 배웠어도 보여준다 —
+     수업이 끝나고 새 단어가 들어왔는지 학생이 확인하는 화면이 여기다.
+     공용 팩은 레벨당 수백 개라 배운 것만 남긴다. 안 그러면 목록이 팩으로 뒤덮인다. */
+  const listed = (student.words || []).filter(w =>
+    !isPackUnit(unitIdForWord(w)) || isStudied(w));
   const byDate = {};
-  studied.forEach(w=>{
+  listed.forEach(w=>{
     const k = studyDateOf(w) || '';
     (byDate[k] = byDate[k] || []).push(w);
   });
   let html = backBtn() + topbar() + `<h2 style="margin:6px 2px 4px">📖 ${L.words}</h2>
     <div class="sub" style="color:var(--text-muted);font-size:.85rem;margin-bottom:6px">${L.wordsSub}</div>`;
-  if(!studied.length){
+  if(!listed.length){
     html += `<div class="card" style="text-align:center;color:var(--text-muted)">
       <img src="${IMG.grumpy}" style="width:120px;margin-bottom:10px" alt="">
       <p>${L.emptyStudied}</p></div>`;

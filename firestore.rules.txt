@@ -2,63 +2,159 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /* ---------- 초대장 ----------
-       문서 ID = sha256(소문자 이메일).
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
 
-       예전 규칙은 `allow get: if request.auth != null` 이었다. 명단에 있는 학생만
-       로그인을 유지할 수 있던 동안에는 그럭저럭 버텼지만, 오픈 모드로 아무나 로그인할 수
-       있게 된 지금은 다르다. 남의 이메일을 짐작해 sha256 만 계산하면 그 학생의
-       이름·언어·개인 구글시트 주소(vocabCsvUrl)를 그대로 꺼내 갈 수 있다.
-       시트는 "웹에 게시" 상태라 주소만 알면 내용이 열린다.
+    // 앱은 sha256(email.trim().toLowerCase()) 의 소문자 hex 64자를 문서 ID 로 쓴다.
+    // 근거 (공식 레퍼런스, hashing 2019-12-03 / Bytes·String 2019–2020):
+    //   hashing.sha256(bytes_or_string) → rules.Bytes  (문자열이면 UTF-8)
+    //   Bytes.toHexString() 예시는 대문자 ('2A')
+    //   String.lower() / trim() / toUtf8() 가 문서화된 메서드
+    // hashing.hexEncode 는 rules.hashing / Index All 에 없다. 컴파일조차 안 될 수 있어 쓰지 않는다.
+    // .lower() 를 빼면 대문자 hex vs 소문자 문서 ID 가 안 맞아 전 학생 로그인이 막힌다.
+    function emailInviteId() {
+      return hashing.sha256(
+        request.auth.token.email.trim().lower().toUtf8()
+      ).toHexString().lower();
+    }
 
-       이제 요청자의 이메일 해시가 문서 ID와 같을 때만 읽힌다 = 자기 것만 읽는다.
-       (없는 문서를 읽으면 permission-denied 가 아니라 "문서 없음" 이 돌아오므로
-        오픈 모드 분기는 그대로 동작한다.) */
+    function isValidProg(prog) {
+      return prog is map
+             && prog.keys().hasOnly(['cur', 'u', 'lvl'])
+             && (!('cur' in prog) || (prog.cur is string && prog.cur.size() <= 40))
+             && (!('lvl' in prog) || (prog.lvl is string && prog.lvl.size() <= 8))
+             && (!('u' in prog) || (prog.u is map && prog.u.size() <= 400));
+    }
+
+    function isValidUnit(unitId) {
+      let d = request.resource.data;
+      // 공용팩(ko-*) 만 40. custom / sheet-* / unsorted 는 한 문서에 단어가 쌓이므로 500.
+      let maxKeys = unitId.matches('^ko-.*') ? 40 : 500;
+      return d.keys().hasOnly(['p', 'm', 'at'])
+             && d.p is map
+             && d.p.size() <= maxKeys
+             && d.m is list
+             && d.m.size() <= maxKeys
+             && d.at is timestamp;
+    }
+
+    function isValidCustomWord() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['ko', 'mean', 'color', 'order', 'dateAdded'])
+             && d.ko is string && d.ko.size() > 0 && d.ko.size() <= 80
+             && d.mean is string && d.mean.size() > 0 && d.mean.size() <= 200
+             && d.color in ['', '#A25379', '#F2685E', '#4FBE6C', '#8A7FFF', '#5BA8E5']
+             && d.order is number
+             && d.dateAdded is string && d.dateAdded.size() <= 40;
+    }
+
+    // profile / prog 는 이번 쓰기에서 그 키가 바뀔 때만 검사한다.
+    // 병합 결과 전체를 보면, 구 문서에 profile.role 이 남아 있어도 세션 저장(points+prog)이 막힌다.
+    function isValidStudentUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return changed.hasOnly(['profile', 'stats', 'packs', 'prog', 'lastUpdated'])
+             && request.resource.data.stats.points is number
+             && request.resource.data.stats.points >= 0
+             && request.resource.data.stats.points
+                  <= resource.data.stats.points + 2000
+             && request.resource.data.stats.points
+                  >= resource.data.stats.points - 20000
+             && (!changed.hasAny(['profile'])
+                 || (request.resource.data.profile is map
+                     && request.resource.data.profile.keys()
+                          .hasOnly(['displayName', 'uiLang', 'meaningLang', 'createdAt'])))
+             && (!changed.hasAny(['prog'])
+                 || isValidProg(request.resource.data.prog));
+    }
+
+    // vocabCsvUrl 은 「웹에 게시」 주소라 인증이 없다. 해시만 알면 그 학생 단어가 열린다.
+    // 오픈 로그인 이후에는 "로그인한 사람"을 믿으면 안 되므로, 토큰 이메일 해시 == 문서 ID 일 때만 get.
+    // 쓰기는 Admin SDK 가 규칙을 우회하므로 클라이언트를 막을 수 있다. list 는 초대 명단 전체가 나온다.
     match /invites/{h} {
       allow get: if request.auth != null
-                 && request.auth.token.email != null
-                 && hashing.sha256(request.auth.token.email.lower().toUtf8())
-                      .toHexString().lower() == h;
-      allow list:  if false;   // 열거 금지
-      allow write: if false;   // 서버(admin SDK)에서만
+                 && request.auth.token.email is string
+                 && emailInviteId() == h;
+      allow list: if false;
+      allow write: if false;
     }
 
-    /* ---------- 학생 문서 ---------- */
     match /students/{uid} {
-      allow read, create: if request.auth.uid == uid;
-      allow update: if request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['profile','stats','packs','lastUpdated'])
-        && request.resource.data.stats.points >= 0
-        && request.resource.data.stats.points <= resource.data.stats.points + 2000
-        && request.resource.data.stats.points >= resource.data.stats.points - 20000;
+      // 앱은 getDoc 한 건만 한다. list 를 열 이유가 없다.
+      allow get: if isOwner(uid);
+      allow list: if false;
 
-      /* 카드·개인단어는 자기 것만 읽고 쓴다. 여기까지는 예전과 같다.
-         달라진 점: 오픈 모드로 누구나 계정을 만들 수 있게 됐으므로 스키마와 길이를
-         못박는다. 안 그러면 남의 Firestore 를 공짜 파일 저장소로 쓸 수 있다
-         (문서 하나에 1 MiB 까지 들어간다).
-         delete 요청에는 request.resource 가 없으므로 write 에서 분리한다. */
-      match /cards/{wordId} {
-        allow read, delete: if request.auth.uid == uid;
-        allow write: if request.auth.uid == uid
-          && request.resource.data.keys().hasOnly(
-               ['packId','due','lastReview','interval','ease','state','reps','lapses',
-                'gradedCorrect','views','correctStreak','firstSeenAt','masteredAt']);
+      // 오픈 모드: invites 문서가 없어도 자기 students/{uid} 를 만든다. 초대장 조건 금지.
+      // profile.role 은 클라이언트가 쓰지 않는다. 나중에 role 로 권한을 주면 즉시 우회되므로
+      // 여기서도 role 을 읽거나 믿지 않는다. 최상위·profile 키 목록에 role 을 넣지 않아 쓰기도 막힌다.
+      allow create: if isOwner(uid)
+                    && request.resource.data.keys()
+                         .hasOnly(['profile', 'stats', 'packs', 'prog', 'lastUpdated'])
+                    && (!('stats' in request.resource.data)
+                        || (request.resource.data.stats is map
+                            && request.resource.data.stats.points is number
+                            && request.resource.data.stats.points >= 0))
+                    && (!('profile' in request.resource.data)
+                        || (request.resource.data.profile is map
+                            && request.resource.data.profile.keys()
+                                 .hasOnly(['displayName', 'uiLang', 'meaningLang', 'createdAt'])))
+                    && (!('packs' in request.resource.data)
+                        || (request.resource.data.packs is list
+                            && request.resource.data.packs.size() <= 20))
+                    && (!('prog' in request.resource.data)
+                        || isValidProg(request.resource.data.prog));
+
+      // 세션 종료 배치가 stats.points + prog + lastUpdated 를 같이 보낸다.
+      // affectedKeys 에 prog 가 없으면 진도 저장이 전건 거부된다.
+      allow update: if isOwner(uid) && isValidStudentUpdate();
+
+      // 앱은 자기 문서를 지우지 않는다. 열어 두면 오동작 한 번에 진도가 사라진다.
+      allow delete: if false;
+
+      // merge:true 의 request.resource.data 는 병합 결과다. 부분 필드만 온 것이 아니다.
+      // p 값(숫자 4개 배열)과 m 원소(문자열)는 맵/리스트를 순회할 API 가 없고
+      // 재귀 한도는 20 이라 키 35개를 다 검사할 수 없다. 키 개수·최상위 스키마만 본다.
+      // 문서 1 MiB 상한은 플랫폼이 강제한다. 문서 개수 상한은 규칙으로 못 건다.
+      match /units/{unitId} {
+        allow get, list: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isValidUnit(unitId);
+        allow delete: if isOwner(uid);
       }
+
+      // 앱이 보내는 5키만 받는다. 길이 제한이 없으면 customWords 가 파일 저장소가 된다.
+      // delete 에는 request.resource 가 없어 create/update 와 분리한다.
+      // 순서 변경은 updateDoc({order}) 이고, 병합 결과에 기존 ko/mean/color 가 남으므로
+      // 같은 스키마 검사가 통과한다.
       match /customWords/{wordId} {
-        allow read, delete: if request.auth.uid == uid;
-        allow write: if request.auth.uid == uid
-          && request.resource.data.keys().hasOnly(['ko','mean','color','order','dateAdded'])
-          && request.resource.data.ko    is string && request.resource.data.ko.size()    <= 100
-          && request.resource.data.mean  is string && request.resource.data.mean.size()  <= 300
-          && request.resource.data.color is string && request.resource.data.color.size() <= 16;
+        allow get, list: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isValidCustomWord();
+        allow delete: if isOwner(uid);
+      }
+
+      // 이관이 cards 를 지우지 않으므로 읽기를 막으면 구 진도가 사라진 것처럼 보인다.
+      // 단어 삭제가 deleteDoc(cards/{wordId}) 를 보낸다.
+      // 새 쓰기는 막는다: 앱은 units 로 옮겼고, 쓰기를 열면 문서 개수 제한 없이
+      // 인증된 누구나 1 MiB 를 쌓을 수 있다.
+      // 구버전이 아직 cards 에 set 하면 퀴즈 저장이 막힌다. 그때는 아래 주석 블록을 본다.
+      match /cards/{wordId} {
+        allow get, list, delete: if isOwner(uid);
+        allow create, update: if false;
+
+        // D2b 배포 전에 이 규칙을 올리면 구버전 세션 저장이 막힌다. 그때만 위
+        // create, update: if false 를 지우고 아래를 살린다.
+        // allow create, update: if isOwner(uid)
+        //   && request.resource.data.keys().hasOnly([
+        //        'packId','due','lastReview','interval','ease','state',
+        //        'reps','lapses','gradedCorrect','views','correctStreak',
+        //        'firstSeenAt','masteredAt'
+        //      ]);
       }
     }
 
-    /* sessions·feedback 컬렉션은 앱이 쓰지 않는다.
-       특히 옛 feedback 규칙은 `allow create: if true` 였다 — 로그인조차 없이
-       누구나 문서를 만들 수 있는 자리였다. 기능이 실제로 생길 때 다시 연다. */
-
-    match /{document=**} { allow read, write: if false; }
+    // feedback / sessions 블록을 두지 않는다.
+    // 예전 feedback 은 allow create: if true 라서 미인증 1 MiB 폭탄이 가능했다.
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }
