@@ -1,6 +1,6 @@
 /* 배포할 때마다 손으로 올린다. 홈 맨 아래에 보인다.
    화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다. */
-const APP_VERSION = 'v1.6';
+const APP_VERSION = 'v1.7';
 
 const IMG = {
   bad: "images/bad.png",
@@ -979,8 +979,12 @@ function currentUnitWords(){
   return wordsInUnit(currentUnitId);
 }
 
+/* 해금 분모. 퀴즈에 나올 수 있는 단어(quizOk)만 센다.
+   reps 는 quizAnswer 에서만 오르는데, 팩의 quiz:false 단어(ko-A-01 에 5개)는
+   출제 풀에 안 들어가 영원히 reps=0 이다. 전체 35로 나누면 30/35 에서 멈추고
+   다음 유닛이 절대 안 열린다. */
 function unitTotal(unitId){
-  return wordsInUnit(unitId).filter(w => w.type !== 'sentence').length;
+  return wordsInUnit(unitId).filter(w => w.quizOk).length;
 }
 
 function knownCountForUnit(unitId){
@@ -990,7 +994,7 @@ function knownCountForUnit(unitId){
 
 function seenCountForUnit(unitId){
   if(!currentUid || loadedUnits.has(unitId)){
-    return wordsInUnit(unitId).filter(w => w.type !== 'sentence' && (w.reps|0) > 0).length;
+    return wordsInUnit(unitId).filter(w => w.quizOk && (w.reps|0) > 0).length;
   }
   return (studentProg.u && studentProg.u[unitId]) || 0;
 }
@@ -1321,9 +1325,9 @@ async function rebuildPackMeanings(){
   });
   const keep = (student.words || []).filter(w => w.source === 'custom' || !isPackUnit(unitIdForWord(w)));
   student.words = packWords.concat(keep);
-  loadedUnits = new Set([...loadedUnits].filter(id => !isPackUnit(id)));
-  const seenU = new Set(packWords.map(w => unitIdForWord(w)));
-  seenU.forEach(id => loadedUnits.add(id));
+  // loadedUnits 는 건드리지 않는다. 진도는 위 prev 로 새 단어에 그대로 옮겼으므로
+  // 읽어 둔 유닛은 여전히 읽은 상태다. 예전엔 팩 유닛 전부를 loaded 로 표시해서
+  // 안 읽은 유닛의 서버 진도를 영영 못 읽었다 (seen 0 표시 → 커밋 때 prog.u 덮어씀).
   dropLearnedCache();
   if(currentUid && !progressLocked && currentUnitId) await loadUnit(currentUnitId);
 }
@@ -3182,7 +3186,11 @@ function composeSession(sourceWords, size=SESSION_SIZE, nOpt=2){
   let pool  = quizPool(sourceWords);
   // 복습 대상이 전부 문장/마스터라 비었으면 전체 단어로 대체
   if(!pool.length) pool = all;
-  const picked = shuffle(pool).slice(0, Math.min(size, pool.length));
+  // 아직 퀴즈로 안 본 단어(reps=0)를 먼저 낸다. 무작위로만 뽑으면 학생은 세션을
+  // 여러 번 돌아도 몇 단어가 계속 빠져서 「다 풀었는데 안 열린다」가 된다.
+  const unseen = shuffle(pool.filter(w => !(w.reps|0)));
+  const seen   = shuffle(pool.filter(w => (w.reps|0) > 0));
+  const picked = unseen.concat(seen).slice(0, Math.min(size, pool.length));
   return picked.map(w=>buildQuestion(w, all, nOpt));
 }
 
@@ -3196,6 +3204,12 @@ async function startQuiz(sourceWords){
   document.onkeydown = null;
   review = null;
   const pool = sourceWords || currentUnitWords();
+  // 홈 퀴즈는 해금된 여러 유닛에서 내는데, 현재 유닛 말고는 서버 진도를 안 읽은 상태다.
+  // 안 읽은 채 풀면 seenCountForUnit 이 옛 prog.u 를 돌려주고 커밋 때 카드·마스터가 덮인다.
+  // 이미 읽은 유닛은 loadUnit 이 바로 돌아오므로 읽기는 세션당 유닛 1회다.
+  try{
+    await Promise.all([...new Set(pool.map(unitIdForWord))].map(id => loadUnit(id)));
+  }catch(e){ console.error('출제 유닛 진도 읽기 실패:', e); }
   // 보기는 전체 단어에서 뽑되, 출제 풀은 현재 유닛으로 한정
   if(quizPool(student.words).length < 2 || quizPool(pool).length < 1){ renderNotEnoughWords(); return; }
   const qs = composeSession(pool, SESSION_SIZE, 4);
