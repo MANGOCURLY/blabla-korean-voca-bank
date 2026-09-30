@@ -1808,12 +1808,17 @@ async function doLogout(){
   levelTest = null;
   studyLang = null;
   if(hadUser){
+    // 아래 단계들은 끝없이 기다릴 수 있다(오프라인, 다른 탭이 DB를 붙잡음). 로그아웃이 멈추면 안 되므로 시간을 제한한다.
+    const within = (p, ms) => Promise.race([p, new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout ' + ms + 'ms')), ms))]);
+    // 캐시를 지우면 아직 서버에 안 간 쓰기(개인 단어 저장·순서 등)도 함께 사라진다. 먼저 보내고 지운다.
+    // signOut 보다 앞이어야 한다 — 로그아웃 뒤에는 이 학생의 인증으로 보낼 수 없다.
+    // 5초 안에 안 끝나면(오프라인 등) 남은 쓰기는 캐시와 함께 버린다. 공용 기기 사생활을 위해 감수한다.
+    try{ await within(window.fb.waitForPendingWrites(window.fb.db), 5000); }
+    catch(e){ console.warn('보내지 못한 쓰기가 남은 채 로그아웃합니다:', e); }
     try{ await window.fb.signOut(window.fb.auth); } catch(e){ console.error(e); }
     // 공용 기기에서 다음 사람이 이전 학생의 Firestore 캐시(IndexedDB)를 보지 않게 지운다.
     // 캐시는 실행 중인 인스턴스를 멈춘(terminate) 뒤에만 지울 수 있다.
     // localStorage 저널(vocabank_journal_<uid>)은 건드리지 않는다 — 다음 로그인 때 복구할 미저장 진도다.
-    // 다른 탭이 DB를 붙잡고 있으면 삭제가 끝없이 기다릴 수 있으므로 시간을 제한한다. 로그아웃이 멈추면 안 된다.
-    const within = (p, ms) => Promise.race([p, new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout ' + ms + 'ms')), ms))]);
     try{ await within(window.fb.terminate(window.fb.db), 5000); }
     catch(e){ console.error('Firestore 종료 실패:', e); }
     try{ await within(window.fb.clearIndexedDbPersistence(window.fb.db), 5000); }

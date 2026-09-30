@@ -6,7 +6,7 @@ import {
   getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
   writeBatch, serverTimestamp, arrayUnion, arrayRemove,
-  terminate, clearIndexedDbPersistence
+  terminate, clearIndexedDbPersistence, waitForPendingWrites
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -46,7 +46,7 @@ try {
     signInWithPopup, signOut, onAuthStateChanged,
     doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
     writeBatch, serverTimestamp, arrayUnion, arrayRemove,
-    terminate, clearIndexedDbPersistence   // 로그아웃 때 로컬 캐시 삭제용 (app.js doLogout)
+    terminate, clearIndexedDbPersistence, waitForPendingWrites   // 로그아웃 때 남은 쓰기 전송 + 로컬 캐시 삭제용 (app.js doLogout)
   };
   window.dispatchEvent(new Event('fb-ready'));
 } catch (e) {
