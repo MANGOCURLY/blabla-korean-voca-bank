@@ -1,6 +1,8 @@
 /* 배포할 때마다 손으로 올린다. 홈 맨 아래에 보인다.
-   화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다. */
-const APP_VERSION = 'v1.7';
+   화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다.
+   index.html 의 app.js?v= · firebase-init.js?v= 도 반드시 같은 값으로 함께 올린다.
+   URL 이 바뀌어야 브라우저가 캐시를 버리고 새 파일을 받는다. */
+const APP_VERSION = 'v1.8';
 
 const IMG = {
   bad: "images/bad.png",
@@ -38,7 +40,7 @@ const T = {
     demoHint: "Démo interne. Même contenu que le mode invité.",
     hi: "Salut",
     welcome: "Prêt à gagner des wons ?",
-    statLearned: "Appris", statKnown: "Mémorisés", statStreak: "Série record",
+    statLearned: "Appris", statKnown: "Mémorisés", statStreak: "Record de session",
     review: "Réviser mes mots 🃏",
     reviewSub: "Cartes-mémo · sans score, sans stress",
     words: "Mes mots par date",
@@ -61,7 +63,7 @@ const T = {
     quiz: "Quiz de mots 🎯",
     quizSub: "4 choix · à ton rythme, sans chrono",
     quizAll: "Quiz mélangé 🎲",
-    quizAllSub: "Tout ce que tu as ouvert · 4 choix",
+    quizAllSub: "Toutes tes unités débloquées · 4 choix",
     qCountQ: (a,b)=>`Question ${a} / ${b}`,
     moreQuiz: "10 questions de plus",
     /* 🃏 cartes-mémo */
@@ -90,12 +92,12 @@ const T = {
     navHome:"Accueil", navWords:"Mots", navLearned:"Appris", navKnown:"Mémorisés", navHelp:"Aide",
     helpTitle:"Comment ça marche",
     help: [
-      ["🎯","Le quiz de mots","10 questions à 4 choix, sans chrono. Seuls les mots sont posés en question, jamais les phrases."],
+      ["🎯","Le quiz de mots","Jusqu'à 10 questions à 4 choix, sans chrono. Chaque mot raté revient une fois à la fin du quiz. Seuls les mots sont posés en question, jamais les phrases."],
       ["🃏","Les cartes-mémo","Le mode révision, sans score ni pression : touche la carte pour retourner le mot et voir le sens. Prends ton temps, rien n'est compté."],
       ["💰","La banque de wons","+100 wons par bonne réponse. Une erreur ne coûte rien : tente ta chance sans risque."],
       ["🔥","Les séries","Enchaîne les bonnes réponses pour faire monter ta série et voir le piment danser."],
-      ["🧠","Mots mémorisés","3 bonnes réponses de suite = mot mémorisé. Continue de le revoir pour le maîtriser."],
-      ["🧠","Révision espacée","Chaque jour, on te ressort les mots au bon moment : 1, 3, 7, 14 puis 30 jours."],
+      ["🧠","Mots mémorisés","3 bonnes réponses de suite = mot mémorisé. 6 bonnes réponses de suite = mot maîtrisé."],
+      ["🔁","Tes erreurs","Un mot raté revient une fois à la fin du même quiz. Il reste ensuite dans « Mes erreurs » jusqu'à ce que tu le réussisses 3 fois de suite au quiz. Pas de rappel programmé : reviens-y quand tu veux."],
     ],
     switchLang:"English",
     progSection: "Ta progression",
@@ -213,7 +215,7 @@ const T = {
     demoHint: "Internal demo. Same content as guest mode.",
     hi: "Hi",
     welcome: "Ready to earn some won?",
-    statLearned: "Learned", statKnown: "Memorized", statStreak: "Best streak",
+    statLearned: "Learned", statKnown: "Memorized", statStreak: "Session best",
     review: "Review my words 🃏",
     reviewSub: "Flashcards · no score, no stress",
     words: "My words by date",
@@ -236,7 +238,7 @@ const T = {
     quiz: "Word quiz 🎯",
     quizSub: "4 choices · your own pace, no timer",
     quizAll: "Mixed quiz 🎲",
-    quizAllSub: "Everything you've unlocked · 4 choices",
+    quizAllSub: "All your unlocked units · 4 choices",
     qCountQ: (a,b)=>`Question ${a} / ${b}`,
     moreQuiz: "10 more questions",
     /* 🃏 flashcards */
@@ -265,12 +267,12 @@ const T = {
     navHome:"Home", navWords:"Words", navLearned:"Learned", navKnown:"Memorized", navHelp:"Help",
     helpTitle:"How it works",
     help: [
-      ["🎯","The word quiz","10 questions with 4 choices, no timer. Only words are quizzed, never sentences."],
+      ["🎯","The word quiz","Up to 10 questions with 4 choices, no timer. Each word you miss comes back once at the end of the quiz. Only words are quizzed, never sentences."],
       ["🃏","Flashcards","The review mode, with no score and no pressure: tap a card to flip the word and see its meaning. Take your time, nothing is counted."],
       ["💰","The won bank","+100 won per correct answer. A miss costs you nothing. Guess without fear."],
       ["🔥","Streaks","Chain correct answers to build your streak and watch the chili dance."],
-      ["🧠","Memorized words","3 correct in a row = a memorized word. Keep reviewing to master it."],
-      ["🧠","Spaced review","Each day we resurface words at the right time: 1, 3, 7, 14, then 30 days."],
+      ["🧠","Memorized words","3 correct in a row = a memorized word. 6 correct in a row = a mastered word."],
+      ["🔁","Your mistakes","A word you miss comes back once at the end of the same quiz. It then stays in \"My mistakes\" until you get it right 3 times in a row in a quiz. No scheduled reminders: go back to it whenever you like."],
     ],
     switchLang:"Français",
     progSection: "Your progress",
@@ -1807,7 +1809,17 @@ async function doLogout(){
   studyLang = null;
   if(hadUser){
     try{ await window.fb.signOut(window.fb.auth); } catch(e){ console.error(e); }
-    // onAuthStateChanged가 renderLogin() 처리
+    // 공용 기기에서 다음 사람이 이전 학생의 Firestore 캐시(IndexedDB)를 보지 않게 지운다.
+    // 캐시는 실행 중인 인스턴스를 멈춘(terminate) 뒤에만 지울 수 있다.
+    // localStorage 저널(vocabank_journal_<uid>)은 건드리지 않는다 — 다음 로그인 때 복구할 미저장 진도다.
+    // 다른 탭이 DB를 붙잡고 있으면 삭제가 끝없이 기다릴 수 있으므로 시간을 제한한다. 로그아웃이 멈추면 안 된다.
+    const within = (p, ms) => Promise.race([p, new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout ' + ms + 'ms')), ms))]);
+    try{ await within(window.fb.terminate(window.fb.db), 5000); }
+    catch(e){ console.error('Firestore 종료 실패:', e); }
+    try{ await within(window.fb.clearIndexedDbPersistence(window.fb.db), 5000); }
+    catch(e){ console.warn('로컬 캐시 삭제 실패 (다른 탭이 열려 있으면 그럴 수 있다):', e); }
+    // 멈춘 인스턴스는 다시 쓸 수 없다. 새로 불러와 새 Firestore 로 로그인 화면부터 시작한다
+    location.reload();
   } else {
     renderLogin();
   }
