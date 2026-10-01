@@ -1,6 +1,8 @@
 /* 배포할 때마다 손으로 올린다. 홈 맨 아래에 보인다.
-   화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다. */
-const APP_VERSION = 'v1.7';
+   화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다.
+   index.html 의 app.js?v= · firebase-init.js?v= 도 반드시 같은 값으로 함께 올린다.
+   URL 이 바뀌어야 브라우저가 캐시를 버리고 새 파일을 받는다. */
+const APP_VERSION = 'v1.8';
 
 const IMG = {
   bad: "images/bad.png",
@@ -38,7 +40,7 @@ const T = {
     demoHint: "Démo interne. Même contenu que le mode invité.",
     hi: "Salut",
     welcome: "Prêt à gagner des wons ?",
-    statLearned: "Appris", statKnown: "Mémorisés", statStreak: "Série record",
+    statLearned: "Appris", statKnown: "Mémorisés", statStreak: "Record de session",
     review: "Réviser mes mots 🃏",
     reviewSub: "Cartes-mémo · sans score, sans stress",
     words: "Mes mots par date",
@@ -61,7 +63,7 @@ const T = {
     quiz: "Quiz de mots 🎯",
     quizSub: "4 choix · à ton rythme, sans chrono",
     quizAll: "Quiz mélangé 🎲",
-    quizAllSub: "Tout ce que tu as ouvert · 4 choix",
+    quizAllSub: "Toutes tes unités débloquées · 4 choix",
     qCountQ: (a,b)=>`Question ${a} / ${b}`,
     moreQuiz: "10 questions de plus",
     /* 🃏 cartes-mémo */
@@ -90,12 +92,12 @@ const T = {
     navHome:"Accueil", navWords:"Mots", navLearned:"Appris", navKnown:"Mémorisés", navHelp:"Aide",
     helpTitle:"Comment ça marche",
     help: [
-      ["🎯","Le quiz de mots","10 questions à 4 choix, sans chrono. Seuls les mots sont posés en question, jamais les phrases."],
+      ["🎯","Le quiz de mots","Jusqu'à 10 questions à 4 choix, sans chrono. Chaque mot raté revient une fois à la fin du quiz. Seuls les mots sont posés en question, jamais les phrases."],
       ["🃏","Les cartes-mémo","Le mode révision, sans score ni pression : touche la carte pour retourner le mot et voir le sens. Prends ton temps, rien n'est compté."],
       ["💰","La banque de wons","+100 wons par bonne réponse. Une erreur ne coûte rien : tente ta chance sans risque."],
       ["🔥","Les séries","Enchaîne les bonnes réponses pour faire monter ta série et voir le piment danser."],
-      ["🧠","Mots mémorisés","3 bonnes réponses de suite = mot mémorisé. Continue de le revoir pour le maîtriser."],
-      ["🧠","Révision espacée","Chaque jour, on te ressort les mots au bon moment : 1, 3, 7, 14 puis 30 jours."],
+      ["🧠","Mots mémorisés","3 bonnes réponses de suite = mot mémorisé. 6 bonnes réponses de suite = mot maîtrisé."],
+      ["🔁","Tes erreurs","Un mot raté revient une fois à la fin du même quiz. Il reste ensuite dans « Mes erreurs » jusqu'à ce que tu le réussisses 3 fois de suite au quiz. Pas de rappel programmé : reviens-y quand tu veux."],
     ],
     switchLang:"English",
     progSection: "Ta progression",
@@ -128,6 +130,7 @@ const T = {
     addWordCancel: "Annuler",
     addWordEmptyError: "Remplis les deux champs.",
     addWordDuplicateError: "Ce mot existe déjà dans ta liste.",
+    addWordTooLongError: (k, m)=>`Trop long : ${k} caractères max pour le coréen, ${m} pour le sens.`,
     addWordDemoNotice: "Mode démo : ce mot ne sera pas sauvegardé après un rafraîchissement.",
     bulkAdd: "📋 Coller plusieurs mots",
     bulkAddSub: "Un mot par ligne, séparé par « - », « : » ou une tabulation",
@@ -135,7 +138,7 @@ const T = {
     bulkPreviewTitle: "Aperçu",
     bulkAddBtn: (n)=>n ? `Ajouter ${n} mot${n>1?'s':''}` : "Rien à ajouter",
     bulkNothing: "Aucun mot lisible. Vérifie le format.",
-    bulkSkipped: (n)=>`${n} ligne${n>1?'s':''} ignorée${n>1?'s':''} (format ou doublon).`,
+    bulkSkipped: (n)=>`${n} ligne${n>1?'s':''} ignorée${n>1?'s':''} (format, longueur ou doublon).`,
     tagCustom: "Perso",
     deleteWord: "Supprimer",
     deleteWordConfirm: "Supprimer ce mot de ton vocabulaire personnel ?",
@@ -213,7 +216,7 @@ const T = {
     demoHint: "Internal demo. Same content as guest mode.",
     hi: "Hi",
     welcome: "Ready to earn some won?",
-    statLearned: "Learned", statKnown: "Memorized", statStreak: "Best streak",
+    statLearned: "Learned", statKnown: "Memorized", statStreak: "Session best",
     review: "Review my words 🃏",
     reviewSub: "Flashcards · no score, no stress",
     words: "My words by date",
@@ -236,7 +239,7 @@ const T = {
     quiz: "Word quiz 🎯",
     quizSub: "4 choices · your own pace, no timer",
     quizAll: "Mixed quiz 🎲",
-    quizAllSub: "Everything you've unlocked · 4 choices",
+    quizAllSub: "All your unlocked units · 4 choices",
     qCountQ: (a,b)=>`Question ${a} / ${b}`,
     moreQuiz: "10 more questions",
     /* 🃏 flashcards */
@@ -265,12 +268,12 @@ const T = {
     navHome:"Home", navWords:"Words", navLearned:"Learned", navKnown:"Memorized", navHelp:"Help",
     helpTitle:"How it works",
     help: [
-      ["🎯","The word quiz","10 questions with 4 choices, no timer. Only words are quizzed, never sentences."],
+      ["🎯","The word quiz","Up to 10 questions with 4 choices, no timer. Each word you miss comes back once at the end of the quiz. Only words are quizzed, never sentences."],
       ["🃏","Flashcards","The review mode, with no score and no pressure: tap a card to flip the word and see its meaning. Take your time, nothing is counted."],
       ["💰","The won bank","+100 won per correct answer. A miss costs you nothing. Guess without fear."],
       ["🔥","Streaks","Chain correct answers to build your streak and watch the chili dance."],
-      ["🧠","Memorized words","3 correct in a row = a memorized word. Keep reviewing to master it."],
-      ["🧠","Spaced review","Each day we resurface words at the right time: 1, 3, 7, 14, then 30 days."],
+      ["🧠","Memorized words","3 correct in a row = a memorized word. 6 correct in a row = a mastered word."],
+      ["🔁","Your mistakes","A word you miss comes back once at the end of the same quiz. It then stays in \"My mistakes\" until you get it right 3 times in a row in a quiz. No scheduled reminders: go back to it whenever you like."],
     ],
     switchLang:"Français",
     progSection: "Your progress",
@@ -303,6 +306,7 @@ const T = {
     addWordCancel: "Cancel",
     addWordEmptyError: "Please fill in both fields.",
     addWordDuplicateError: "This word is already in your list.",
+    addWordTooLongError: (k, m)=>`Too long: max ${k} characters for Korean, ${m} for the meaning.`,
     addWordDemoNotice: "Demo mode: this word won't be saved after a refresh.",
     bulkAdd: "📋 Paste several words",
     bulkAddSub: "One word per line, separated by \"-\", \":\" or a tab",
@@ -310,7 +314,7 @@ const T = {
     bulkPreviewTitle: "Preview",
     bulkAddBtn: (n)=>n ? `Add ${n} word${n>1?'s':''}` : "Nothing to add",
     bulkNothing: "No readable word. Check the format.",
-    bulkSkipped: (n)=>`${n} line${n>1?'s':''} skipped (bad format or duplicate).`,
+    bulkSkipped: (n)=>`${n} line${n>1?'s':''} skipped (bad format, too long or duplicate).`,
     tagCustom: "Mine",
     deleteWord: "Delete",
     deleteWordConfirm: "Delete this word from your personal vocabulary?",
@@ -1125,7 +1129,10 @@ function newStudentDoc(){
     },
     packs: currentPackId ? [currentPackId] : [],
     prog: {
-      cur: packCur() || defaultUnitId(),
+      // 레벨 테스트 대기 중(pendingLevelTest)에는 cur 을 넣지 않는다. 뜻 언어 선택 때 만드는
+      // 문서에 cur='ko-A-01' 이 먼저 들어가면, 테스트 도중 나간 학생이 다음 로그인부터
+      // 「배치 완료」로 보여 테스트를 다시 못 받는다. restoreProgress 는 cur 없음 = 테스트 대기.
+      ...(pendingLevelTest ? {} : { cur: packCur() || defaultUnitId() }),
       u: (studentProg && studentProg.u) || {},
       ...(currentPackLevel ? { lvl: currentPackLevel } : {})
     },
@@ -1408,7 +1415,10 @@ async function persistPlacement(){
 
 async function applyLevelPlacement(level, unitN){
   const lv = normalizePackLevel(level);
-  const unitId = `ko-${lv}-01`;
+  // 결과 화면이 「N유닛 근처」라고 안내하므로 실제로도 N에 놓는다. 예전엔 항상 01 이라
+  // 2~N 이 잠겨 있었다. 범위는 1..레벨 유닛 수로 자른다 (unlockedCount 가 cur 앞을 연다).
+  const n = Math.min(Math.max(unitN|0, 1), unitsInLevel(lv));
+  const unitId = `ko-${lv}-${String(n).padStart(2, '0')}`;
   if(currentPackLevel !== lv){
     let packWords;
     try{
@@ -1530,7 +1540,7 @@ function renderLevelTestResult(){
     <div class="btn-row" style="flex-direction:column;margin-top:22px">
       <button class="btn" id="ltStart">${escapeHtml(L.ltStartBtn)}</button>
     </div>`;
-  $('#ltStart').onclick = () => applyLevelPlacement(s.level, 1);
+  $('#ltStart').onclick = () => applyLevelPlacement(s.level, s.unitN);
 }
 
 /* ---------- 세션 배치 커밋
@@ -1619,6 +1629,11 @@ async function recoverJournal(){
 /* ---------- 개인 단어 (v3 §2.5) ----------
    단어 1개 추가/수정/삭제/순서변경이 90,000 B → 약 150 B. */
 const ORDER_GAP = 1024;
+
+/* firestore.rules.txt 의 isValidCustomWord 와 같은 상한 (ko 80 · mean 200).
+   규칙이 거부하면 화면엔 들어간 것처럼 보이다가 새로고침 후 사라지므로 보내기 전에 막고 알린다. */
+const CUSTOM_KO_MAX = 80;
+const CUSTOM_MEAN_MAX = 200;
 
 function customList(){
   return student.words.filter(w=>w.source==='custom').sort((a,b)=>(a.order??0)-(b.order??0));
@@ -1806,8 +1821,23 @@ async function doLogout(){
   levelTest = null;
   studyLang = null;
   if(hadUser){
+    // 아래 단계들은 끝없이 기다릴 수 있다(오프라인, 다른 탭이 DB를 붙잡음). 로그아웃이 멈추면 안 되므로 시간을 제한한다.
+    const within = (p, ms) => Promise.race([p, new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout ' + ms + 'ms')), ms))]);
+    // 캐시를 지우면 아직 서버에 안 간 쓰기(개인 단어 저장·순서 등)도 함께 사라진다. 먼저 보내고 지운다.
+    // signOut 보다 앞이어야 한다 — 로그아웃 뒤에는 이 학생의 인증으로 보낼 수 없다.
+    // 5초 안에 안 끝나면(오프라인 등) 남은 쓰기는 캐시와 함께 버린다. 공용 기기 사생활을 위해 감수한다.
+    try{ await within(window.fb.waitForPendingWrites(window.fb.db), 5000); }
+    catch(e){ console.warn('보내지 못한 쓰기가 남은 채 로그아웃합니다:', e); }
     try{ await window.fb.signOut(window.fb.auth); } catch(e){ console.error(e); }
-    // onAuthStateChanged가 renderLogin() 처리
+    // 공용 기기에서 다음 사람이 이전 학생의 Firestore 캐시(IndexedDB)를 보지 않게 지운다.
+    // 캐시는 실행 중인 인스턴스를 멈춘(terminate) 뒤에만 지울 수 있다.
+    // localStorage 저널(vocabank_journal_<uid>)은 건드리지 않는다 — 다음 로그인 때 복구할 미저장 진도다.
+    try{ await within(window.fb.terminate(window.fb.db), 5000); }
+    catch(e){ console.error('Firestore 종료 실패:', e); }
+    try{ await within(window.fb.clearIndexedDbPersistence(window.fb.db), 5000); }
+    catch(e){ console.warn('로컬 캐시 삭제 실패 (다른 탭이 열려 있으면 그럴 수 있다):', e); }
+    // 멈춘 인스턴스는 다시 쓸 수 없다. 새로 불러와 새 Firestore 로 로그인 화면부터 시작한다
+    location.reload();
   } else {
     renderLogin();
   }
@@ -2754,7 +2784,9 @@ function parseBulkWords(text){
     const m = s.match(/^([^\t:\-]+?)\s*[\t:\-]\s*(.+)$/);
     if(!m) return {raw:s, ko:'', mean:'', ok:false};
     const ko = m[1].trim(), mean = m[2].trim();
-    return {raw:s, ko, mean, ok: !!(ko && mean)};
+    // 길이 초과 줄은 형식 오류와 같이 「건너뜀」으로 — 한 줄 때문에 배치 전체가 거부되지 않게
+    const ok = !!(ko && mean) && ko.length <= CUSTOM_KO_MAX && mean.length <= CUSTOM_MEAN_MAX;
+    return {raw:s, ko, mean, ok};
   }).filter(Boolean);
 }
 
@@ -2779,8 +2811,8 @@ function renderBulkAdd(){
   let good = [];
   const refresh = ()=>{
     const parsed = parseBulkWords($('#bulkText').value);
-    // 중복 검사는 로컬 캐시에서 — 서버 읽기 0회
-    const seen = new Set(student.words.map(w=>w.ko));
+    // 중복 검사는 로컬 캐시에서 — 서버 읽기 0회. 내 단어끼리만 (saveWordForm 과 같은 기준)
+    const seen = new Set(customList().map(w=>w.ko));
     good = [];
     const bad = [];
     parsed.forEach(p=>{
@@ -2850,7 +2882,14 @@ function saveWordForm(editing){
     errEl.classList.remove('hidden');
     return;
   }
-  const dup = student.words.some(w=>w.ko===ko && w!==editing);   // 로컬 캐시에서 검사 — 서버 읽기 0회
+  if(ko.length > CUSTOM_KO_MAX || mean.length > CUSTOM_MEAN_MAX){
+    errEl.textContent = L.addWordTooLongError(CUSTOM_KO_MAX, CUSTOM_MEAN_MAX);
+    errEl.classList.remove('hidden');
+    return;
+  }
+  // 로컬 캐시에서 검사 — 서버 읽기 0회. 내 단어끼리만 본다: 공용 팩(수천 개)까지 보면
+  // 학교·사랑 같은 흔한 단어를 「나만의 단어」에 못 넣는다.
+  const dup = student.words.some(w=>w.source==='custom' && w.ko===ko && w!==editing);
   if(dup){
     errEl.textContent = L.addWordDuplicateError;
     errEl.classList.remove('hidden');
@@ -3203,13 +3242,18 @@ async function startQuiz(sourceWords){
   if(currentUnitId === 'custom') await ensureCustomWords();
   document.onkeydown = null;
   review = null;
-  const pool = sourceWords || currentUnitWords();
+  let pool = sourceWords || currentUnitWords();
   // 홈 퀴즈는 해금된 여러 유닛에서 내는데, 현재 유닛 말고는 서버 진도를 안 읽은 상태다.
   // 안 읽은 채 풀면 seenCountForUnit 이 옛 prog.u 를 돌려주고 커밋 때 카드·마스터가 덮인다.
   // 이미 읽은 유닛은 loadUnit 이 바로 돌아오므로 읽기는 세션당 유닛 1회다.
   try{
     await Promise.all([...new Set(pool.map(unitIdForWord))].map(id => loadUnit(id)));
-  }catch(e){ console.error('출제 유닛 진도 읽기 실패:', e); }
+  }catch(e){
+    console.error('출제 유닛 진도 읽기 실패:', e);
+    // 못 읽은 유닛을 그대로 내면 커밋 때 빈 카드가 p 를 덮고 m 은 merge 라도 통째 교체된다.
+    // 그 유닛은 이번 세션 출제에서 뺀다 (읽은 유닛만 남긴다).
+    if(currentUid && !progressLocked) pool = pool.filter(w => loadedUnits.has(unitIdForWord(w)));
+  }
   // 보기는 전체 단어에서 뽑되, 출제 풀은 현재 유닛으로 한정
   if(quizPool(student.words).length < 2 || quizPool(pool).length < 1){ renderNotEnoughWords(); return; }
   const qs = composeSession(pool, SESSION_SIZE, 4);

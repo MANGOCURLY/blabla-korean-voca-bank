@@ -63,7 +63,16 @@ service cloud.firestore {
              && (!changed.hasAny(['profile'])
                  || (request.resource.data.profile is map
                      && request.resource.data.profile.keys()
-                          .hasOnly(['displayName', 'uiLang', 'meaningLang', 'createdAt'])))
+                          .hasOnly(['displayName', 'uiLang', 'meaningLang', 'createdAt', 'role'])
+                     // 이관 문서(migrate-students.mjs)에는 profile.role 이 남아 있다. 병합 결과에
+                     // 그 키가 그대로 있으면 profile 을 건드리는 모든 update 가 거부됐다
+                     // (뜻 언어 변경이 새로고침하면 원래대로). 이미 있던 값 그대로만 허용하고,
+                     // 새로 넣거나 바꾸는 것은 막는다. tools/remove-profile-role.mjs 로 지우고 나면
+                     // 이 예외는 더 이상 쓰이지 않는다.
+                     && (!('role' in request.resource.data.profile)
+                         || ('profile' in resource.data
+                             && 'role' in resource.data.profile
+                             && request.resource.data.profile.role == resource.data.profile.role))))
              && (!changed.hasAny(['prog'])
                  || isValidProg(request.resource.data.prog));
     }
