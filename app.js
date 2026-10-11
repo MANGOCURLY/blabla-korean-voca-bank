@@ -3193,8 +3193,13 @@ function pickDistractors(w, allWords, field, answer, need, meaningField){
   const taken = new Set([key(answer)]);
   const answerMean = meaningField ? key(w[meaningField] || '') : '';
   const takenMean = new Set(answerMean ? [answerMean] : []);
+  // 같은 철자 단어의 뜻도 정답이 된다 — 그(he) 문제에 거(that) 에서 온 「that」 이 보기로 나오면 안 된다
+  if(meaningField) allWords.forEach(x=>{
+    if(x.quizKo && x.quizKo===w.quizKo && x[meaningField]) takenMean.add(key(x[meaningField]));
+  });
   const out = [];
-  const rest = allWords.filter(x=>x.wordId!==w.wordId && x[field]);
+  // 철자가 같은 다른 단어(이 = this/tooth)는 뺀다. 「이」의 뜻으로 tooth 가 오답 보기에 나오면 정답이 2개다
+  const rest = allWords.filter(x=>x.wordId!==w.wordId && x[field] && !(x.quizKo && x.quizKo===w.quizKo));
 
   // 정답만 유독 길거나 짧으면 뜻을 몰라도 골라지므로 길이가 비슷한 후보를 우선한다
   const nearestByLength = list => [...list].sort((a,b)=>
@@ -3234,8 +3239,9 @@ function buildQuestion(w, allWords, nOpt=2){
   // (다른 학생 데이터에서 빌려오지 않음 — 데모/타 학생 콘텐츠 혼입 방지)
   const distractors = pickDistractors(w, allWords, field, answer, nOpt-1, 'quizMean');
   const options = shuffle([answer, ...distractors]);
-  // 보기 → 그 보기의 단어. 답한 뒤 보기 뜻 펼치기에 쓴다 (pickDistractors 는 x[field] 를 그대로 넣는다)
-  const optW = new Map(options.map(o => [o, o === answer ? w : allWords.find(x => x[field] === o)]));
+  // 보기 → 그 보기에 해당하는 단어들. 답한 뒤 보기 뜻 펼치기에 쓴다 (pickDistractors 는 x[field] 를 그대로 넣는다).
+  // 동음이의어(일 = work/day/one)는 하나만 고르면 엉뚱한 뜻이 나올 수 있어 전부 담는다
+  const optW = new Map(options.map(o => [o, o === answer ? [w] : allWords.filter(x => x[field] === o)]));
   return {w, dir, promptText, answer, options, optW,
           label: dir==="mean2ko" ? L.promptMean : L.promptKo};
 }
@@ -3379,9 +3385,9 @@ function wireOptionPeek(q, wrongBtn){
   const hint = $('#peekHint');
   $('#options').classList.add('answered');
   const glossOf = o => {
-    const gw = q.optW && q.optW.get(o.querySelector('.kr').textContent);
-    if(!gw) return '';
-    return q.dir === 'ko2mean' ? (gw.ko || '') : (gw.mean || '');
+    const ws = (q.optW && q.optW.get(o.querySelector('.kr').textContent)) || [];
+    const vals = ws.map(x => q.dir === 'ko2mean' ? x.ko : x.mean).filter(Boolean);
+    return [...new Set(vals)].join(' / ');
   };
   const open = o => {
     const g = o.querySelector('.opt-gloss');
