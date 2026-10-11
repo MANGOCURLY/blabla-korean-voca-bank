@@ -2,7 +2,7 @@
    화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다.
    index.html 의 app.js?v= · firebase-init.js?v= 도 반드시 같은 값으로 함께 올린다.
    URL 이 바뀌어야 브라우저가 캐시를 버리고 새 파일을 받는다. */
-const APP_VERSION = 'v1.8';
+const APP_VERSION = 'v1.9';
 
 const IMG = {
   bad: "images/bad.png",
@@ -46,7 +46,7 @@ const T = {
     words: "Mes mots par date",
     wordsSub: "Tout ce qu'on a appris",
     knownMenu: "Mots mémorisés & maîtrisés",
-    knownSub: "Ta collection",
+    knownSub: "3 bonnes réponses de suite",
     todayReview: "à réviser",
     sectionPlay: "S'entraîner", sectionTest: "Tester", sectionBrowse: "Parcourir",
     promptKo: "Que veut dire…", promptMean: "Comment dit-on…",
@@ -66,6 +66,10 @@ const T = {
     quizAllSub: "Toutes tes unités débloquées · 4 choix",
     qCountQ: (a,b)=>`Question ${a} / ${b}`,
     moreQuiz: "10 questions de plus",
+    nextUnit: (t)=>`Unité suivante : ${t} →`,
+    peekHint: "Touche un choix pour voir son sens · 100 ₩",
+    peekNoMoney: "Pas assez de wons pour voir ce sens",
+    peekGuest: "Connecte-toi pour voir le sens des autres choix",
     /* 🃏 cartes-mémo */
     reviewTitle: "Cartes-mémo",
     flipHint: "Touche la carte 👆",
@@ -94,9 +98,9 @@ const T = {
     help: [
       ["🎯","Le quiz de mots","Jusqu'à 10 questions à 4 choix, sans chrono. Chaque mot raté revient une fois à la fin du quiz. Seuls les mots sont posés en question, jamais les phrases."],
       ["🃏","Les cartes-mémo","Le mode révision, sans score ni pression : touche la carte pour retourner le mot et voir le sens. Prends ton temps, rien n'est compté."],
-      ["💰","La banque de wons","+100 wons par bonne réponse. Une erreur ne coûte rien : tente ta chance sans risque."],
+      ["💰","La banque de wons","+100 wons par bonne réponse. Une erreur ne coûte rien : tente ta chance sans risque. Après ta réponse, touche un autre choix pour voir son sens : 100 wons (le choix raté s'affiche gratuitement)."],
       ["🔥","Les séries","Enchaîne les bonnes réponses pour faire monter ta série et voir le piment danser."],
-      ["🧠","Mots mémorisés","3 bonnes réponses de suite = mot mémorisé. 6 bonnes réponses de suite = mot maîtrisé."],
+      ["🧠","Appris, mémorisés, maîtrisés","Appris = un mot que tu as réussi au moins une fois. Mémorisé = 3 bonnes réponses de suite (une erreur le fait redescendre). Maîtrisé = 6 bonnes réponses de suite, et il le reste."],
       ["🔁","Tes erreurs","Un mot raté revient une fois à la fin du même quiz. Il reste ensuite dans « Mes erreurs » jusqu'à ce que tu le réussisses 3 fois de suite au quiz. Pas de rappel programmé : reviens-y quand tu veux."],
     ],
     switchLang:"English",
@@ -119,7 +123,7 @@ const T = {
     copyLink: "Copier le lien",
     copiedMsg: "Lien copié ! Colle-le dans Chrome ou Safari.",
     learnedMenu: "Mots appris",
-    learnedSub: "Tous niveaux confondus",
+    learnedSub: "Réussis au moins une fois · tous niveaux",
     emptyLearned: "Pas encore de mot appris. Commence l'entraînement pour en débloquer !",
     emptyStudied: "Tu n'as encore étudié aucun mot. Ouvre une unité pour commencer.",
     addWord: "Ajouter un mot",
@@ -222,7 +226,7 @@ const T = {
     words: "My words by date",
     wordsSub: "Everything we've learned",
     knownMenu: "Memorized & mastered words",
-    knownSub: "Your collection",
+    knownSub: "3 correct in a row",
     todayReview: "due",
     sectionPlay: "Practice", sectionTest: "Test", sectionBrowse: "Browse",
     promptKo: "What does this mean…", promptMean: "How do you say…",
@@ -242,6 +246,10 @@ const T = {
     quizAllSub: "All your unlocked units · 4 choices",
     qCountQ: (a,b)=>`Question ${a} / ${b}`,
     moreQuiz: "10 more questions",
+    nextUnit: (t)=>`Next unit: ${t} →`,
+    peekHint: "Tap a choice to see its meaning · 100 ₩",
+    peekNoMoney: "Not enough won to see this meaning",
+    peekGuest: "Log in to see what the other choices mean",
     /* 🃏 flashcards */
     reviewTitle: "Flashcards",
     flipHint: "Tap the card 👆",
@@ -270,9 +278,9 @@ const T = {
     help: [
       ["🎯","The word quiz","Up to 10 questions with 4 choices, no timer. Each word you miss comes back once at the end of the quiz. Only words are quizzed, never sentences."],
       ["🃏","Flashcards","The review mode, with no score and no pressure: tap a card to flip the word and see its meaning. Take your time, nothing is counted."],
-      ["💰","The won bank","+100 won per correct answer. A miss costs you nothing. Guess without fear."],
+      ["💰","The won bank","+100 won per correct answer. A miss costs you nothing. Guess without fear. After answering, tap another choice to see its meaning for 100 won (the choice you got wrong is shown for free)."],
       ["🔥","Streaks","Chain correct answers to build your streak and watch the chili dance."],
-      ["🧠","Memorized words","3 correct in a row = a memorized word. 6 correct in a row = a mastered word."],
+      ["🧠","Learned, memorized, mastered","Learned = a word you've got right at least once. Memorized = 3 correct in a row (a miss sends it back down). Mastered = 6 correct in a row, and it stays mastered."],
       ["🔁","Your mistakes","A word you miss comes back once at the end of the same quiz. It then stays in \"My mistakes\" until you get it right 3 times in a row in a quiz. No scheduled reminders: go back to it whenever you like."],
     ],
     switchLang:"Français",
@@ -295,7 +303,7 @@ const T = {
     copyLink: "Copy link",
     copiedMsg: "Link copied! Paste it into Chrome or Safari.",
     learnedMenu: "Learned words",
-    learnedSub: "All levels together",
+    learnedSub: "Right at least once · all levels",
     emptyLearned: "No learned words yet. Start practicing to unlock some!",
     emptyStudied: "You haven't studied any words yet. Open a unit to start.",
     addWord: "Add a word",
@@ -483,7 +491,17 @@ function dropLearnedCache(){
 }
 let customWordsLoaded = false;
 let pendingUnits = new Set(); // 저널에 쌓인 유닛 (세션 종료 시 1문서씩 커밋)
-let showPron = false;        // 발음 표시 토글 (세션 전체 공용, 문제별 개별 아님)
+let showPron = false;        // 로마자 발음 표시 토글 (문제·정답 카드 공용, 문제별 개별 아님)
+// 기기에 기억한다 — 로마자가 눈을 끄는 학생은 매번 끄고 싶지 않다 (알리손 피드백 ④)
+try{ showPron = localStorage.getItem('blabla_show_pron') === '1'; }catch(e){}
+function setShowPron(on){
+  showPron = on;
+  try{ localStorage.setItem('blabla_show_pron', on ? '1' : '0'); }catch(e){}
+  // 문제의 🔤 와 정답 카드의 🔤 가 한 화면에 같이 있을 수 있다 — 둘 다 맞춘다
+  app.querySelectorAll('.pron-toggle').forEach(b => b.classList.toggle('active', on));
+  ['#pronText', '#acPron'].forEach(sel => { const el = $(sel); if(el) el.classList.toggle('hidden', !on); });
+}
+const PEEK_COST = 100;       // 답한 뒤 보기 뜻 하나 보기 = 정답 1번 보상과 같은 값
 let progressLocked = false;  // Firestore 진도 로딩 실패 시 true → 저장(덮어쓰기) 잠금으로 기존 데이터 보호
 let sheetFailed = false;     // 시트 CSV 실패. 팩은 있으므로 앱은 연다
 let saveFailed = false;      // 세션 저장이 한 번이라도 거부됐다
@@ -3216,7 +3234,9 @@ function buildQuestion(w, allWords, nOpt=2){
   // (다른 학생 데이터에서 빌려오지 않음 — 데모/타 학생 콘텐츠 혼입 방지)
   const distractors = pickDistractors(w, allWords, field, answer, nOpt-1, 'quizMean');
   const options = shuffle([answer, ...distractors]);
-  return {w, dir, promptText, answer, options,
+  // 보기 → 그 보기의 단어. 답한 뒤 보기 뜻 펼치기에 쓴다 (pickDistractors 는 x[field] 를 그대로 넣는다)
+  const optW = new Map(options.map(o => [o, o === answer ? w : allWords.find(x => x[field] === o)]));
+  return {w, dir, promptText, answer, options, optW,
           label: dir==="mean2ko" ? L.promptMean : L.promptKo};
 }
 
@@ -3285,6 +3305,7 @@ function renderQuizQuestion(){
         ` : ""}
       </div>
       <div class="options" id="options"></div>
+      <div class="peek-hint hidden" id="peekHint"></div>
     </div>
     <div id="noteSlot"></div>`;
 
@@ -3292,17 +3313,13 @@ function renderQuizQuestion(){
   const pronBtn = $('#pronToggle');
   if(pronBtn){
     $('#pronText').textContent = q.w.pron;
-    pronBtn.onclick = ()=>{
-      showPron = !showPron;
-      pronBtn.classList.toggle('active', showPron);
-      $('#pronText').classList.toggle('hidden', !showPron);
-    };
+    pronBtn.onclick = ()=>setShowPron(!showPron);
   }
   const optEl = $('#options');
   q.options.forEach(opt=>{
     const b = document.createElement('button');
     b.className = "opt";
-    b.innerHTML = `<span class="mark"></span><span class="kr"></span>`;
+    b.innerHTML = `<span class="mark"></span><span class="opt-body"><span class="kr"></span><span class="opt-gloss hidden"></span></span>`;
     b.querySelector('.kr').textContent = opt;   // 직접 추가한 단어의 HTML 주입 차단
     b.onclick = ()=>quizAnswer(b, opt, q);
     optEl.appendChild(b);
@@ -3330,7 +3347,8 @@ function renderAnswerCard(w){
   slot.innerHTML = `<div class="answer-card">
     <div class="ac-ko kr" id="acKo"></div>
     ${hasMeta ? `<div class="ac-meta">
-      ${w.pron ? `<span class="ac-pron" id="acPron"></span>` : ``}
+      ${w.pron ? `<button class="pron-toggle ${showPron?'active':''}" id="acPronToggle" title="${L.pronToggle}">🔤</button>
+        <span class="ac-pron ${showPron?'':'hidden'}" id="acPron"></span>` : ``}
       ${pos ? `<span class="ac-pos" id="acPos"></span>` : ``}
     </div>` : ``}
     <div class="ac-mean" id="acMean"></div>
@@ -3340,11 +3358,58 @@ function renderAnswerCard(w){
     </div>` : ``}
   </div>`;
   $('#acKo').textContent = w.ko;
-  if(w.pron) $('#acPron').textContent = w.pron;
+  if(w.pron){
+    $('#acPron').textContent = w.pron;
+    // 문제 화면의 🔤 와 같은 설정이다. 정답 카드에서 켜고 끄면 다음 문제에도 이어진다
+    $('#acPronToggle').onclick = ()=>setShowPron(!showPron);
+  }
   if(pos) $('#acPos').textContent = pos;
   $('#acMean').textContent = w.mean;
   if(w.example) $('#acExKo').textContent = w.example;
   if(w.exampleMean) $('#acExMean').textContent = w.exampleMean;
+}
+
+/* 답한 뒤 오답 보기를 누르면 그 보기의 반대쪽 말(뜻 또는 한국어)을 펼친다 (알리손 피드백 ③).
+   - 오답으로 고른 보기는 무료로 바로 펼친다 — 내가 고른 게 뭐였는지가 학습의 핵심이라서
+   - 나머지 오답 보기는 하나에 PEEK_COST 원 (정답 1번 = 1번 보기). 이미 펼친 건 다시 받지 않는다
+   - 정답 보기는 정답 카드가 이미 보여주므로 누를 게 없다
+   - 게스트는 원이 없으므로 로그인 안내만 한다
+   진도·통계(reps 등)는 건드리지 않는다. 원은 세션 끝 commitJournal 이 points 로 저장한다. */
+function wireOptionPeek(q, wrongBtn){
+  const hint = $('#peekHint');
+  $('#options').classList.add('answered');
+  const glossOf = o => {
+    const gw = q.optW && q.optW.get(o.querySelector('.kr').textContent);
+    if(!gw) return '';
+    return q.dir === 'ko2mean' ? (gw.ko || '') : (gw.mean || '');
+  };
+  const open = o => {
+    const g = o.querySelector('.opt-gloss');
+    g.textContent = glossOf(o);
+    g.classList.remove('hidden');
+    o.classList.remove('peekable');
+  };
+  let closed = 0;
+  app.querySelectorAll('.opt').forEach(o=>{
+    o.onclick = null;
+    if(o.classList.contains('correct') || !glossOf(o)){ o.disabled = true; return; }
+    if(o === wrongBtn){ open(o); o.disabled = true; return; }
+    closed++;
+    o.classList.add('peekable');
+    o.onclick = ()=>{
+      if(!o.classList.contains('peekable')) return;
+      if(isGuest){ hint.textContent = L.peekGuest; return; }
+      if(bank < PEEK_COST){ hint.textContent = L.peekNoMoney; return; }
+      updateBank(-PEEK_COST);
+      open(o);
+      o.disabled = true;
+      if(!app.querySelector('.opt.peekable')) hint.classList.add('hidden');
+    };
+  });
+  if(closed){
+    hint.textContent = isGuest ? L.peekGuest : L.peekHint;
+    hint.classList.remove('hidden');
+  }
 }
 
 function quizAnswer(btn, chosen, q){
@@ -3353,11 +3418,11 @@ function quizAnswer(btn, chosen, q){
   const correct = chosen===q.answer;
 
   app.querySelectorAll('.opt').forEach(o=>{
-    o.disabled = true;
     const t = o.querySelector('.kr').textContent;
     if(t===q.answer){ o.classList.add('correct'); o.querySelector('.mark').textContent="✓"; }
     else if(o===btn){ o.classList.add('wrong');   o.querySelector('.mark').textContent="✕"; }
   });
+  wireOptionPeek(q, correct ? null : btn);
 
   const w = q.w;
   const now = new Date().toISOString();
@@ -3391,7 +3456,7 @@ function quizAnswer(btn, chosen, q){
 
   // 답을 다시 읽고 외울 시간을 갖도록 버튼을 눌러야 다음 문제로 진행
   $('#noteSlot').insertAdjacentHTML('beforeend',
-    `<button class="btn" id="nextBtn" style="margin-top:14px">${L.next}</button>`);
+    `<button class="btn next-fixed" id="nextBtn">${L.next}</button>`);
   $('#nextBtn').onclick = ()=>{
     session.i++;
     if(session.i>=session.qs.length) renderResult();
@@ -3449,6 +3514,13 @@ function renderResult(){
   const img = s.correct>=8 ? IMG.money
             : s.correct>=5 ? IMG.excited : IMG.surprised;
 
+  // 한 유닛 퀴즈였고 다음 유닛이 열려 있으면 유닛 목록으로 나가지 않고 바로 이어 푼다 (알리손 피드백 ⑧)
+  const srcUnits = [...new Set((s.source || []).map(unitIdForWord))];
+  const ids = orderedUnitIds();
+  const at = srcUnits.length === 1 ? ids.indexOf(srcUnits[0]) : -1;
+  const nextId = at >= 0 ? ids[at + 1] : null;
+  const showNext = !!(nextId && unitUnlocked(nextId));
+
   app.innerHTML = backBtn() + topbar() + `
     <div class="result">
       <div id="captureArea">
@@ -3458,12 +3530,22 @@ function renderResult(){
         ${isGuest ? '' : `<div class="earned">💰 +${wonFmt(s.earned)} ${L.earned}</div>`}
       </div>
       <div class="btn-row" style="flex-direction:column">
-        <button class="btn" id="moreBtn">${L.moreQuiz}</button>
+        ${showNext ? `<button class="btn" id="nextUnitBtn"></button>` : ``}
+        <button class="btn ${showNext ? 'secondary' : ''}" id="moreBtn">${L.moreQuiz}</button>
         <button class="btn secondary" id="homeBtn">${L.home}</button>
         <button class="btn secondary" id="shareBtn">📤 ${L.share}</button>
       </div>
     </div>`;
   wireBackBtn();
+  if(showNext){
+    const nb = $('#nextUnitBtn');
+    nb.textContent = L.nextUnit(unitTitle(nextId));
+    nb.onclick = async ()=>{
+      session = null;
+      await selectUnit(nextId, false);
+      startQuiz(currentUnitWords());
+    };
+  }
   $('#moreBtn').onclick = ()=>startQuiz(s.source);
   $('#homeBtn').onclick = ()=>{ session = null; renderHome(); };
   $('#shareBtn').onclick = shareResult;
