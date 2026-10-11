@@ -2,7 +2,7 @@
    화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다.
    index.html 의 app.js?v= · firebase-init.js?v= 도 반드시 같은 값으로 함께 올린다.
    URL 이 바뀌어야 브라우저가 캐시를 버리고 새 파일을 받는다. */
-const APP_VERSION = 'v1.9';
+const APP_VERSION = 'v1.10';
 
 const IMG = {
   bad: "images/bad.png",
@@ -70,6 +70,12 @@ const T = {
     peekHint: "Touche un choix pour voir son sens · 100 ₩",
     peekNoMoney: "Pas assez de wons pour voir ce sens",
     peekGuest: "Connecte-toi pour voir le sens des autres choix",
+    alsoMeans: "Veut aussi dire : ",
+    starAdd: "☆ À revoir", starOn: "★ Dans « À revoir »",
+    starMenu: "Mots à revoir ⭐", starSub: "Les mots que tu as mis de côté",
+    starTitle: (n)=>`${n} mot${n>1?'s':''} à revoir`,
+    starEmpty: "Pas encore de mot mis de côté. Pendant un quiz, touche « ☆ À revoir » sous la réponse.",
+    starRemove: "Retirer de la liste",
     /* 🃏 cartes-mémo */
     reviewTitle: "Cartes-mémo",
     flipHint: "Touche la carte 👆",
@@ -101,6 +107,7 @@ const T = {
       ["💰","La banque de wons","+100 wons par bonne réponse. Une erreur ne coûte rien : tente ta chance sans risque. Après ta réponse, touche un autre choix pour voir son sens : 100 wons (le choix raté s'affiche gratuitement)."],
       ["🔥","Les séries","Enchaîne les bonnes réponses pour faire monter ta série et voir le piment danser."],
       ["🧠","Appris, mémorisés, maîtrisés","Appris = un mot que tu as réussi au moins une fois. Mémorisé = 3 bonnes réponses de suite (une erreur le fait redescendre). Maîtrisé = 6 bonnes réponses de suite, et il le reste."],
+      ["⭐","Mots à revoir","Tu as trouvé la réponse au hasard ? Touche « ☆ À revoir » sous la réponse. Tes mots t'attendent dans « Mots à revoir » sur l'accueil, avec cartes-mémo et quiz."],
       ["🔁","Tes erreurs","Un mot raté revient une fois à la fin du même quiz. Il reste ensuite dans « Mes erreurs » jusqu'à ce que tu le réussisses 3 fois de suite au quiz. Pas de rappel programmé : reviens-y quand tu veux."],
     ],
     switchLang:"English",
@@ -250,6 +257,12 @@ const T = {
     peekHint: "Tap a choice to see its meaning · 100 ₩",
     peekNoMoney: "Not enough won to see this meaning",
     peekGuest: "Log in to see what the other choices mean",
+    alsoMeans: "Also means: ",
+    starAdd: "☆ Save to review", starOn: "★ Saved to review",
+    starMenu: "Words to review ⭐", starSub: "Words you saved in quizzes",
+    starTitle: (n)=>`${n} word${n===1?'':'s'} saved`,
+    starEmpty: "No saved words yet. In a quiz, tap \"☆ Save to review\" under the answer.",
+    starRemove: "Remove from list",
     /* 🃏 flashcards */
     reviewTitle: "Flashcards",
     flipHint: "Tap the card 👆",
@@ -281,6 +294,7 @@ const T = {
       ["💰","The won bank","+100 won per correct answer. A miss costs you nothing. Guess without fear. After answering, tap another choice to see its meaning for 100 won (the choice you got wrong is shown for free)."],
       ["🔥","Streaks","Chain correct answers to build your streak and watch the chili dance."],
       ["🧠","Learned, memorized, mastered","Learned = a word you've got right at least once. Memorized = 3 correct in a row (a miss sends it back down). Mastered = 6 correct in a row, and it stays mastered."],
+      ["⭐","Words to review","Got it right by guessing? Tap \"☆ Save to review\" under the answer. Your saved words wait in \"Words to review\" on the home screen, with flashcards and a quiz."],
       ["🔁","Your mistakes","A word you miss comes back once at the end of the same quiz. It then stays in \"My mistakes\" until you get it right 3 times in a row in a quiz. No scheduled reminders: go back to it whenever you like."],
     ],
     switchLang:"Français",
@@ -470,6 +484,9 @@ let loginLang = detectInitialLang();  // 로그인 화면 전용 미리보기 �
 let session = null;   // 🎯 퀴즈 세션
 let review  = null;   // 🃏 플래시카드 복습 세션
 let bank = 0;
+let bankBase = 0;            // 서버에 마지막으로 읽거나 쓴 points. 저널 복구 때 그 세션의 증감만 더하려고 둔다
+let starred = new Set();     // ⭐ 다시 볼 단어 (wordId). students.stats.starred 에 저장 — toggleStar 참고
+let homonymIndex = null;     // packs/homonyms.json — 정답 카드 「다른 뜻」 (ensureHomonyms)
 let bestStreak = 0;
 let currentUserEmail = null; // Firebase 로그인 이메일 (데모 모드면 null)
 let currentUid = null;       // Firestore 문서 키. 이메일 평문을 키로 쓰지 않는다
@@ -762,6 +779,10 @@ function packRowsForLang(pack, lang){
         ko: pw.ko,
         pos: pw.pos,
         pron: pw.pron,            // 팩에 5,965개 다 들어 있다
+        pk: pw.pk || '',          // 한글 발음 [설랄]. 철자와 다를 때만 있다 (tools/build-hangul-pron.mjs)
+        // 예문 (tools/apply-examples.mjs). 정답 카드가 example/exampleMean 을 이미 그린다
+        example: pw.ex || '',
+        exampleMean: (lang === 'fr' ? pw.exFr : pw.exEn) || '',
         mean: lang === 'fr' ? pw.fr : pw.en,
         type: 'word',
         unitId: unit.id
@@ -891,7 +912,7 @@ async function startGuest(){
     currentPackLevel = 'A';
     currentUnitId = DEFAULT_OPEN_UNIT;
     studentProg = { cur: currentUnitId, u: {}, lvl: 'A' };
-    bank = 0; bestStreak = 0;
+    bank = 0; bestStreak = 0; starred = new Set();
     document.documentElement.lang = lang;
     renderHome();
   }catch(e){
@@ -905,7 +926,7 @@ function exitGuest(){
   studyLang = null;
   dropLearnedCache();
   student = null; session = null; review = null; levelTest = null;
-  bank = 0; bestStreak = 0;
+  bank = 0; bestStreak = 0; starred = new Set();
   document.onkeydown = null;
   guestReset();
   renderLogin();
@@ -942,7 +963,7 @@ function renderGuestWall(onContinue){
 async function setupStudent(invite, words, lang){
   student = { name: invite.name, lang, words };
   L = T[lang] || T.en;
-  bank = 0; bestStreak = 0;
+  bank = 0; bestStreak = 0; starred = new Set();
   document.documentElement.lang = lang;
 }
 
@@ -1191,6 +1212,8 @@ async function restoreProgress(preloadedSnap){
   if(snap.exists()){
     const data = snap.data() || {};
     bank = typeof data?.stats?.points === 'number' ? data.stats.points : 100;
+    bankBase = bank;
+    starred =new Set(Array.isArray(data?.stats?.starred) ? data.stats.starred.filter(x => typeof x === 'string') : []);
     const prog = data.prog || {};
     studentProg = {
       cur: prog.cur || null,
@@ -1199,6 +1222,8 @@ async function restoreProgress(preloadedSnap){
     };
   } else {
     bank = 100;
+    bankBase = bank;
+    starred = new Set();
     studentProg = { cur: null, u: {}, lvl: null };
   }
   const curFromDoc = studentProg.cur;
@@ -1574,7 +1599,7 @@ function journalCard(w){
     const units = {};
     pendingUnits.forEach(id=>{ units[id] = packedFromMemory(id); });
     localStorage.setItem(journalKey(), JSON.stringify({
-      points: bank, cur: currentUnitId, units
+      points: bank, base: bankBase, cur: currentUnitId, units
     }));
   }catch(e){ /* 저장공간 부족 — 세션 종료 시 메모리에서 커밋된다 */ }
 }
@@ -1601,6 +1626,7 @@ async function commitJournal(){
   });
   try{
     await batch.commit();
+    bankBase = points;
     pendingUnits.clear();
     localStorage.removeItem(journalKey());
     saveFailed = false;
@@ -1622,7 +1648,13 @@ async function recoverJournal(){
   const hasOldCards = saved.cards && typeof saved.cards === 'object' && Object.keys(saved.cards).length;
   if(!hasUnits && !hasOldCards) return;
   console.info('이전 세션의 미저장 진도를 복구합니다.');
-  if(typeof saved.points === 'number') bank = Math.max(bank, saved.points);
+  if(typeof saved.points === 'number'){
+    // 보기 뜻 펼치기로 원이 줄어들 수 있다. max 로 고르면 쓴 원이 되살아나므로,
+    // base(그 세션 시작 때 서버 값)가 있으면 그 세션의 증감만 지금 서버 값에 더한다. 옛 저널은 예전처럼 max
+    bank = typeof saved.base === 'number'
+      ? Math.max(0, bank + saved.points - saved.base)
+      : Math.max(bank, saved.points);
+  }
   if(hasUnits){
     if(saved.units.custom) await ensureCustomWords();
     Object.entries(saved.units).forEach(([unitId, packed])=>{
@@ -2364,6 +2396,12 @@ function renderHome(){
       ${wrongWords().length ? `<span class="badge">${wrongWords().length}</span>` : ''}
       <span class="arrow">→</span>
     </button>
+    <button class="menu-btn" id="starBtn">
+      <span class="emoji">⭐</span>
+      <span class="mtext"><b>${L.starMenu}</b><span>${L.starSub}</span></span>
+      ${starredWords().length ? `<span class="badge">${starredWords().length}</span>` : ''}
+      <span class="arrow">→</span>
+    </button>
 
     <div class="section-title">${L.sectionTest}</div>
     <button class="menu-btn" id="quizBtn">
@@ -2409,6 +2447,7 @@ function renderHome(){
   $('#quizBtn').onclick = ()=>startQuiz(unlockedPoolWords());
   $('#reviewBtn').onclick = ()=>startReview('learned');
   $('#wrongBtn').onclick = ()=>renderWrong();
+  $('#starBtn').onclick = ()=>renderStarred();
   const ltBtn = $('#levelTestBtn');
   if(ltBtn) ltBtn.onclick = ()=>startLevelTest();
   $('#wordsBtn').onclick = ()=>renderWords();
@@ -2492,7 +2531,7 @@ async function renderUnit(unitId){
   `;
   wireBackBtn();
   $('#unitCardsBtn').onclick = ()=>startReview('unit');
-  $('#unitQuizBtn').onclick = ()=>startQuiz(currentUnitWords());
+  $('#unitQuizBtn').onclick = ()=>startQuiz(currentUnitWords(), true);
   app.querySelectorAll('[data-unit]').forEach(btn=>{
     btn.onclick = ()=>renderUnit(btn.dataset.unit);
   });
@@ -2577,9 +2616,12 @@ function wordLevelBadge(w){
   return m ? m[1] : '';
 }
 
-function wordRowHtml(w, controls=false, withLevel, withUnit=false){
+function wordRowHtml(w, controls=false, withLevel, withUnit=false, withStar=false){
   const del = (w.source==='custom')
     ? `<button class="word-del" data-del="${escapeHtml(w.wordId)}" title="${L.deleteWord}">✕</button>`
+    : '';
+  const star = withStar
+    ? `<button class="word-star" data-star="${escapeHtml(w.wordId)}" title="${L.starRemove}">★</button>`
     : '';
   const ctl = 'background:var(--surface-raised);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);cursor:pointer;padding:3px 7px;line-height:1;font-size:.72rem;font-family:inherit';
   const move = controls
@@ -2608,7 +2650,7 @@ function wordRowHtml(w, controls=false, withLevel, withUnit=false){
     <span class="mean">${escapeHtml(w.mean)}</span>
     ${levelTag}${customTag}${unitTag}
     <span class="tag ${statusTag(w).cls}">${statusTag(w).txt}</span>
-    ${edit}${del}
+    ${edit}${star}${del}
   </div>`;
 }
 
@@ -2627,6 +2669,8 @@ function deleteCustomWord(wordId, reRenderFn){
   if(!confirm(L.deleteWordConfirm)) return;
 
   student.words = student.words.filter(x=>x!==w);
+  // 내 단어 id 는 다시 쓰일 수 있다(max+1). 별표를 남기면 나중에 새로 만든 단어가 별표를 물려받는다
+  if(starred.has(w.wordId)) toggleStar(w);
   removeCustomWord(w);           // customWords 문서 + 해당 카드 문서 삭제
   if(reRenderFn) reRenderFn();
 }
@@ -2984,6 +3028,7 @@ function reviewPool(mode){
     return currentUnitWords().filter(w=>w.type!=="sentence" && w.ko && w.mean);
   }
   if(mode === 'wrong') return wrongWords();
+  if(mode === 'starred') return starredWords();
   // 'learned' — 한 번이라도 맞힌 단어만 복습한다
   return (student.words || []).filter(w =>
     (w.gradedCorrect||0) > 0 && w.type!=="sentence" && w.ko && w.mean);
@@ -3014,15 +3059,17 @@ function countCardView(w){
 function renderReviewEmpty(mode){
   botnav.classList.add('hidden');
   review = null;
-  const sub = mode === 'wrong' ? L.wrongEmpty : mode === 'learned' ? L.reviewEmptyLearned : L.reviewEmptySub;
+  const sub = mode === 'wrong' ? L.wrongEmpty : mode === 'starred' ? L.starEmpty
+            : mode === 'learned' ? L.reviewEmptyLearned : L.reviewEmptySub;
   const img = mode === 'wrong' ? IMG.excited : IMG.surprised;
+  const title = mode === 'wrong' ? L.wrongMenu : mode === 'starred' ? L.starMenu : L.reviewEmptyTitle;
   app.innerHTML = backBtn() + topbar() + `
     <div class="result">
       <img src="${img}" alt="">
-      <h2>${mode === 'wrong' ? L.wrongMenu : L.reviewEmptyTitle}</h2>
+      <h2>${title}</h2>
       <div class="score" style="max-width:380px;margin:0 auto 18px">${sub}</div>
       <div class="btn-row" style="flex-direction:column">
-        ${isGuest || mode === 'wrong' ? '' : `<button class="btn" id="addNowBtn">➕ ${L.addWord}</button>`}
+        ${isGuest || mode === 'wrong' || mode === 'starred' ? '' : `<button class="btn" id="addNowBtn">➕ ${L.addWord}</button>`}
         <button class="btn secondary" id="homeBtn">${L.home}</button>
       </div>
     </div>`;
@@ -3077,6 +3124,74 @@ async function renderWrong(){
   $('#wrongQuizBtn').onclick = ()=>startQuiz(wrongWords());
 }
 
+/* ⭐ 다시 볼 단어 (알리손 피드백 ①) — 찍어서 맞힌 단어처럼, 맞혔어도 다시 보고 싶은 단어를 모은다.
+   students.stats.starred 에 wordId 배열로 둔다. 규칙(isValidStudentUpdate)은 stats 안에서 points 만 보므로
+   콘솔 규칙을 바꾸지 않아도 된다. 세션 배치(commitJournal)에는 넣지 않고 누를 때만 쓴다 —
+   다른 기기에 남은 옛 목록이 세션 저장 때 덮어쓰지 않게. 게스트는 메모리에만 둔다.
+   목록은 「내 오답」과 같은 범위(지금 레벨 팩 + 수업 단어 + 내 단어)다. 다른 레벨에서 고른 별표는
+   지워지지 않고 그 레벨로 돌아가면 다시 보인다. */
+function starredWords(){
+  return (student && student.words || []).filter(w =>
+    starred.has(w.wordId) && w.type !== 'sentence' && w.ko && w.mean);
+}
+
+function toggleStar(w){
+  const on = !starred.has(w.wordId);
+  if(on) starred.add(w.wordId);
+  else starred.delete(w.wordId);
+  if(!currentUid || progressLocked || !studentDocExists) return;
+  // 배열 통째가 아니라 한 개씩 더하고 뺀다 — 다른 기기에서 고른 별표를 이 기기의 옛 목록이 지우지 않게
+  D().updateDoc(studentRef(), {
+    'stats.starred': on ? D().arrayUnion(w.wordId) : D().arrayRemove(w.wordId),
+    lastUpdated: D().serverTimestamp()
+  }).catch(e => console.error('별표 저장 실패:', e));
+}
+
+async function renderStarred(){
+  botnav.classList.remove('hidden');
+  document.onkeydown = null;
+  review = null;
+  setNav('home');
+  await ensureSheetUnits();
+  if(currentUid && starred.size) await ensureCustomWords();
+  const list = starredWords();
+  if(!list.length){ renderReviewEmpty('starred'); return; }
+  // 상태 태그(학습 중·외움)가 맞게 보이도록 별표 단어가 있는 유닛 진도를 읽는다. 퀴즈 시작 때도 어차피 읽는다
+  try{
+    await Promise.all([...new Set(list.map(unitIdForWord))].map(id => loadUnit(id)));
+  }catch(e){ console.error('별표 유닛 진도 읽기 실패:', e); }
+  let html = backBtn() + topbar() + `
+    <div class="hello">
+      <div>
+        <h2>${L.starMenu}</h2>
+        <div class="sub">${escapeHtml(L.starTitle(list.length))}</div>
+      </div>
+    </div>
+    <button class="menu-btn" id="starCardsBtn">
+      <span class="emoji">🃏</span>
+      <span class="mtext"><b>${L.wrongCards}</b><span>${L.reviewSub}</span></span>
+      <span class="arrow">→</span>
+    </button>
+    <button class="menu-btn" id="starQuizBtn">
+      <span class="emoji">🎯</span>
+      <span class="mtext"><b>${L.wrongQuiz}</b><span>${L.quizSub}</span></span>
+      <span class="arrow">→</span>
+    </button>`;
+  list.forEach(w => { html += wordRowHtml(w, false, false, true, true); });
+  app.innerHTML = html;
+  wireBackBtn();
+  $('#starCardsBtn').onclick = ()=>startReview('starred');
+  $('#starQuizBtn').onclick = ()=>startQuiz(starredWords());
+  app.querySelectorAll('[data-star]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const w = list.find(x => x.wordId === btn.dataset.star);
+      if(w) toggleStar(w);
+      renderStarred();
+    };
+  });
+  wireDeleteButtons(()=>renderStarred());
+}
+
 function renderReview(){
   botnav.classList.add('hidden');
   const r = review, w = r.cards[r.i];
@@ -3101,7 +3216,8 @@ function renderReview(){
           <span class="fstatus tag ${st.cls}">${st.txt}</span>
           <div class="fside">${L.sideKo}</div>
           <div class="ftext kr ${w.ko.length>12?'long':''}" id="cardKo"></div>
-          ${w.pron ? `<div class="fpron" id="cardPron"></div>` : ``}
+          ${w.pk ? `<div class="fpron kr" id="cardPk"></div>` : ``}
+          ${(w.pron && showPron) ? `<div class="fpron" id="cardPron"></div>` : ``}
           <div class="fhint">${L.flipHint}</div>
         </div>
         <div class="face back">
@@ -3124,7 +3240,9 @@ function renderReview(){
   // 시트/개인 단어 문자열은 HTML로 넣지 않는다
   $('#cardKo').textContent = w.ko;
   $('#cardMean').textContent = w.mean;
-  if(w.pron) $('#cardPron').textContent = w.pron;
+  // 로마자는 퀴즈의 🔤 설정을 따르고, 한글 발음은 늘 보인다 (정답 카드와 같은 규칙)
+  if(w.pk) $('#cardPk').textContent = `[${w.pk}]`;
+  if(w.pron && showPron) $('#cardPron').textContent = w.pron;
 
   const flash = $('#flash');
   const flip = ()=>{ r.flipped = !r.flipped; flash.classList.toggle('flipped', r.flipped); };
@@ -3169,7 +3287,9 @@ function renderReviewDone(){
       </div>
     </div>`;
   wireBackBtn();
-  $('#quizBtn').onclick = ()=>startQuiz(currentUnitWords());
+  // 별표 카드 다음 퀴즈는 별표 단어로 (지금 유닛으로 가면 방금 본 카드와 다른 단어가 나온다)
+  $('#quizBtn').onclick = ()=> mode === 'starred' ? startQuiz(starredWords())
+                                                  : startQuiz(currentUnitWords(), mode === 'unit');
   $('#againBtn').onclick = ()=>startReview(mode);
   $('#homeBtn').onclick = ()=>renderHome();
 }
@@ -3193,10 +3313,15 @@ function pickDistractors(w, allWords, field, answer, need, meaningField){
   const taken = new Set([key(answer)]);
   const answerMean = meaningField ? key(w[meaningField] || '') : '';
   const takenMean = new Set(answerMean ? [answerMean] : []);
-  // 같은 철자 단어의 뜻도 정답이 된다 — 그(he) 문제에 거(that) 에서 온 「that」 이 보기로 나오면 안 된다
+  // 철자 → 그 철자를 가진 단어들의 뜻. 동음이의어는 보기 하나가 뜻을 여러 개 가진다
+  const meansOfKo = new Map();
   if(meaningField) allWords.forEach(x=>{
-    if(x.quizKo && x.quizKo===w.quizKo && x[meaningField]) takenMean.add(key(x[meaningField]));
+    if(!x.quizKo || !x[meaningField]) return;
+    if(!meansOfKo.has(x.quizKo)) meansOfKo.set(x.quizKo, []);
+    meansOfKo.get(x.quizKo).push(key(x[meaningField]));
   });
+  // 같은 철자 단어의 뜻도 정답이 된다 — 그(he) 문제에 거(that) 에서 온 「that」 이 보기로 나오면 안 된다
+  (meansOfKo.get(w.quizKo) || []).forEach(m => takenMean.add(m));
   const out = [];
   // 철자가 같은 다른 단어(이 = this/tooth)는 뺀다. 「이」의 뜻으로 tooth 가 오답 보기에 나오면 정답이 2개다
   const rest = allWords.filter(x=>x.wordId!==w.wordId && x[field] && !(x.quizKo && x.quizKo===w.quizKo));
@@ -3217,11 +3342,14 @@ function pickDistractors(w, allWords, field, answer, need, meaningField){
     for(const x of shuffle(nearestByLength(tier).slice(0, Math.max(need*4, 12)))){
       if(out.length >= need) break;
       if(taken.has(key(x[field]))) continue;   // 선택지에 보이는 값이 겹치면 정답이 2개가 됨
-      // mean2ko: 한국어는 달라도 뜻이 같으면 (것/거 = thing) 정답이 2개가 되거나, 오답끼리도 같은 뜻이 됨
-      const mx = meaningField ? key(x[meaningField] || '') : '';
-      if(mx && takenMean.has(mx)) continue;
+      // mean2ko: 한국어는 달라도 뜻이 같으면 (것/거 = thing) 정답이 2개가 되거나, 오답끼리도 같은 뜻이 됨.
+      // 보기로 보이는 한국어가 동음이의어면 그 철자의 뜻 전부를 본다 — "that" 문제에 「그」(he 로 뽑혔어도 that 도 됨)
+      const mxs = !meaningField ? []
+        : field === 'quizKo' ? (meansOfKo.get(x.quizKo) || [])
+        : [key(x[meaningField] || '')].filter(Boolean);
+      if(mxs.some(m => takenMean.has(m))) continue;
       taken.add(key(x[field]));
-      if(mx) takenMean.add(mx);
+      mxs.forEach(m => takenMean.add(m));
       out.push(x[field]);
     }
   }
@@ -3242,7 +3370,7 @@ function buildQuestion(w, allWords, nOpt=2){
   // 보기 → 그 보기에 해당하는 단어들. 답한 뒤 보기 뜻 펼치기에 쓴다 (pickDistractors 는 x[field] 를 그대로 넣는다).
   // 동음이의어(일 = work/day/one)는 하나만 고르면 엉뚱한 뜻이 나올 수 있어 전부 담는다
   const optW = new Map(options.map(o => [o, o === answer ? [w] : allWords.filter(x => x[field] === o)]));
-  return {w, dir, promptText, answer, options, optW,
+  return {w, dir, promptText, answer, options, optW, peeked: new Set(),
           label: dir==="mean2ko" ? L.promptMean : L.promptKo};
 }
 
@@ -3263,9 +3391,12 @@ function composeSession(sourceWords, size=SESSION_SIZE, nOpt=2){
    🎯 단어 퀴즈 (4지선다)
    ===================================================================== */
 
-async function startQuiz(sourceWords){
-  if(guestWallDue()){ renderGuestWall(()=>startQuiz(sourceWords)); return; }
+/* fromUnit: 유닛 화면의 「퀴즈」에서 시작했나. 결과 화면 「다음 유닛」은 이때만 보인다
+   (오답·별표 퀴즈가 우연히 한 유닛 단어만 담아도 다음 유닛으로 보내면 진도 위치가 엉뚱하게 바뀐다) */
+async function startQuiz(sourceWords, fromUnit=false){
+  if(guestWallDue()){ renderGuestWall(()=>startQuiz(sourceWords, fromUnit)); return; }
   if(currentUnitId === 'custom') await ensureCustomWords();
+  await ensureHomonyms();
   document.onkeydown = null;
   review = null;
   let pool = sourceWords || currentUnitWords();
@@ -3285,7 +3416,7 @@ async function startQuiz(sourceWords){
   const qs = composeSession(pool, SESSION_SIZE, 4);
   if(!qs.length){ renderNotEnoughWords(); return; }
   session = { mode:'quiz', qs, i:0, correct:0, streak:0, earned:0, size: qs.length, answered:false,
-              source:pool };
+              source:pool, fromUnit };
   renderQuizQuestion();
 }
 
@@ -3343,27 +3474,72 @@ function queueRetry(q){
   if(el) el.textContent = `🎯 ${L.qCountQ(session.i+1, session.qs.length)}`;
 }
 
+/* 동음이의어 색인 (tools/build-homonyms.mjs 가 만든다). 정적 파일이라 Firestore 비용이 없다.
+   못 받아도 퀴즈는 그대로 — 「다른 뜻」 줄만 안 나온다. 실패하면 빈 색인으로 두고 다시 받지 않는다. */
+async function ensureHomonyms(){
+  if(homonymIndex) return;
+  try{
+    // 네트워크가 걸려도 퀴즈 시작이 멈추지 않게 4초에서 끊는다
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), 4000);
+    const res = await fetch('packs/homonyms.json', {signal: ctrl.signal});
+    if(res.ok) homonymIndex = await res.json();
+    clearTimeout(timer);
+  }catch(e){ console.error('동음이의어 색인 로딩 실패:', e); }
+  if(!homonymIndex) homonymIndex = {};
+}
+
+/* 정답 카드의 「다른 뜻」 (알리손 피드백 ⑤) — 눈 = eye 일 때 snow 처럼, 같은 철자의 다른 뜻.
+   레벨을 가리지 않는다 (밤 = night(A) / chestnut(B)). 지금 단어와 같은 뜻은 뺀다. */
+function alsoMeans(w){
+  const list = (homonymIndex && homonymIndex[w.ko]) || [];
+  const lang = meaningLang();
+  const mine = String(w.mean || '').trim().toLowerCase();
+  const out = [];
+  list.forEach(h=>{
+    const m = lang === 'fr' ? h.fr : h.en;
+    if(!m || h.id === w.wordId || m.trim().toLowerCase() === mine || out.includes(m)) return;
+    out.push(m);
+  });
+  return out;
+}
+
 /* 정답 카드 (v3 §3.5) — 정규화된 보기가 아니라 시트 원본을 보여준다.
    pos·예문이 비면 그 자리를 통째로 감춘다. 문자열은 전부 textContent. */
 function renderAnswerCard(w){
   const pos = posLabel(w.pos);
-  const hasMeta = !!(w.pron || pos);
+  const hasMeta = !!(w.pron || pos || w.pk);
   const hasEx = !!(w.example || w.exampleMean);
+  const also = alsoMeans(w);
   const slot = $('#noteSlot');
   slot.innerHTML = `<div class="answer-card">
     <div class="ac-ko kr" id="acKo"></div>
     ${hasMeta ? `<div class="ac-meta">
+      ${w.pk ? `<span class="ac-pk kr" id="acPk"></span>` : ``}
       ${w.pron ? `<button class="pron-toggle ${showPron?'active':''}" id="acPronToggle" title="${L.pronToggle}">🔤</button>
         <span class="ac-pron ${showPron?'':'hidden'}" id="acPron"></span>` : ``}
       ${pos ? `<span class="ac-pos" id="acPos"></span>` : ``}
     </div>` : ``}
     <div class="ac-mean" id="acMean"></div>
+    ${also.length ? `<div class="ac-also" id="acAlso"></div>` : ``}
     ${hasEx ? `<div class="ac-ex">
       ${w.example ? `<div class="ac-ex-ko kr" id="acExKo"></div>` : ``}
       ${w.exampleMean ? `<div class="ac-ex-mean" id="acExMean"></div>` : ``}
     </div>` : ``}
+    <button class="star-btn" id="acStar"></button>
   </div>`;
   $('#acKo').textContent = w.ko;
+  // 한글 발음은 로마자 토글과 따로 늘 보인다 — 로마자를 끈 학생이 소리를 보는 자리다 (알리손 피드백 ④)
+  if(w.pk) $('#acPk').textContent = `[${w.pk}]`;
+  if(also.length) $('#acAlso').textContent = L.alsoMeans + also.join(' · ');
+  const starBtn = $('#acStar');
+  const paintStar = ()=>{
+    const on = starred.has(w.wordId);
+    starBtn.textContent = on ? L.starOn : L.starAdd;
+    starBtn.classList.toggle('on', on);
+  };
+  paintStar();
+  starBtn.onclick = ()=>{ toggleStar(w); paintStar(); };
   if(w.pron){
     $('#acPron').textContent = w.pron;
     // 문제 화면의 🔤 와 같은 설정이다. 정답 카드에서 켜고 끄면 다음 문제에도 이어진다
@@ -3377,15 +3553,18 @@ function renderAnswerCard(w){
 
 /* 답한 뒤 오답 보기를 누르면 그 보기의 반대쪽 말(뜻 또는 한국어)을 펼친다 (알리손 피드백 ③).
    - 오답으로 고른 보기는 무료로 바로 펼친다 — 내가 고른 게 뭐였는지가 학습의 핵심이라서
-   - 나머지 오답 보기는 하나에 PEEK_COST 원 (정답 1번 = 1번 보기). 이미 펼친 건 다시 받지 않는다
+   - 나머지 오답 보기는 하나에 PEEK_COST 원 (정답 1번 = 1번 보기). 이미 펼친 건 다시 받지 않는다 —
+     재출제 문항({...q} 복사본)도 q.peeked 를 같이 써서, 한 번 산 뜻은 다시 나와도 그냥 펼쳐진다
    - 정답 보기는 정답 카드가 이미 보여주므로 누를 게 없다
    - 게스트는 원이 없으므로 로그인 안내만 한다
    진도·통계(reps 등)는 건드리지 않는다. 원은 세션 끝 commitJournal 이 points 로 저장한다. */
 function wireOptionPeek(q, wrongBtn){
   const hint = $('#peekHint');
   $('#options').classList.add('answered');
+  if(!q.peeked) q.peeked = new Set();
+  const key = o => o.querySelector('.kr').textContent;
   const glossOf = o => {
-    const ws = (q.optW && q.optW.get(o.querySelector('.kr').textContent)) || [];
+    const ws = (q.optW && q.optW.get(key(o))) || [];
     const vals = ws.map(x => q.dir === 'ko2mean' ? x.ko : x.mean).filter(Boolean);
     return [...new Set(vals)].join(' / ');
   };
@@ -3399,7 +3578,7 @@ function wireOptionPeek(q, wrongBtn){
   app.querySelectorAll('.opt').forEach(o=>{
     o.onclick = null;
     if(o.classList.contains('correct') || !glossOf(o)){ o.disabled = true; return; }
-    if(o === wrongBtn){ open(o); o.disabled = true; return; }
+    if(o === wrongBtn || q.peeked.has(key(o))){ open(o); o.disabled = true; return; }
     closed++;
     o.classList.add('peekable');
     o.onclick = ()=>{
@@ -3407,6 +3586,8 @@ function wireOptionPeek(q, wrongBtn){
       if(isGuest){ hint.textContent = L.peekGuest; return; }
       if(bank < PEEK_COST){ hint.textContent = L.peekNoMoney; return; }
       updateBank(-PEEK_COST);
+      journalCard(q.w);    // 차감도 저널에 바로 남긴다 — 다음 답 전에 앱을 닫아도 쓴 원이 되살아나지 않게
+      q.peeked.add(key(o));
       open(o);
       o.disabled = true;
       if(!app.querySelector('.opt.peekable')) hint.classList.add('hidden');
@@ -3525,7 +3706,7 @@ function renderResult(){
   const ids = orderedUnitIds();
   const at = srcUnits.length === 1 ? ids.indexOf(srcUnits[0]) : -1;
   const nextId = at >= 0 ? ids[at + 1] : null;
-  const showNext = !!(nextId && unitUnlocked(nextId));
+  const showNext = !!(s.fromUnit && nextId && unitUnlocked(nextId));
 
   app.innerHTML = backBtn() + topbar() + `
     <div class="result">
@@ -3549,10 +3730,10 @@ function renderResult(){
     nb.onclick = async ()=>{
       session = null;
       await selectUnit(nextId, false);
-      startQuiz(currentUnitWords());
+      startQuiz(currentUnitWords(), true);
     };
   }
-  $('#moreBtn').onclick = ()=>startQuiz(s.source);
+  $('#moreBtn').onclick = ()=>startQuiz(s.source, s.fromUnit);
   $('#homeBtn').onclick = ()=>{ session = null; renderHome(); };
   $('#shareBtn').onclick = shareResult;
 }
