@@ -2,7 +2,7 @@
    화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다.
    index.html 의 app.js?v= · firebase-init.js?v= 도 반드시 같은 값으로 함께 올린다.
    URL 이 바뀌어야 브라우저가 캐시를 버리고 새 파일을 받는다. */
-const APP_VERSION = 'v1.10';
+const APP_VERSION = 'v1.11';
 
 const IMG = {
   bad: "images/bad.png",
@@ -1650,9 +1650,10 @@ async function recoverJournal(){
   console.info('이전 세션의 미저장 진도를 복구합니다.');
   if(typeof saved.points === 'number'){
     // 보기 뜻 펼치기로 원이 줄어들 수 있다. max 로 고르면 쓴 원이 되살아나므로,
-    // base(그 세션 시작 때 서버 값)가 있으면 그 세션의 증감만 지금 서버 값에 더한다. 옛 저널은 예전처럼 max
+    // base(그 세션 시작 때 서버 값)가 있으면 그 세션의 증감만 지금 서버 값에 더한다. 옛 저널은 예전처럼 max.
+    // 서버 값이 저널 값과 같으면 커밋은 됐는데 저널을 지우기 전에 앱이 닫힌 것 — 다시 더하면 두 배가 된다
     bank = typeof saved.base === 'number'
-      ? Math.max(0, bank + saved.points - saved.base)
+      ? (bank === saved.points ? bank : Math.max(0, bank + saved.points - saved.base))
       : Math.max(bank, saved.points);
   }
   if(hasUnits){
@@ -3563,6 +3564,8 @@ function wireOptionPeek(q, wrongBtn){
   $('#options').classList.add('answered');
   if(!q.peeked) q.peeked = new Set();
   const key = o => o.querySelector('.kr').textContent;
+  // 무료로 펼친 내 오답도 기억한다 — 재출제 문항에서 정답을 고르면 같은 보기를 다시 사게 되므로
+  if(wrongBtn) q.peeked.add(key(wrongBtn));
   const glossOf = o => {
     const ws = (q.optW && q.optW.get(key(o))) || [];
     const vals = ws.map(x => q.dir === 'ko2mean' ? x.ko : x.mean).filter(Boolean);

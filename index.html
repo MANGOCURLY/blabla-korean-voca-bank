@@ -82,7 +82,7 @@ body{
 /* 한국어 본문은 시스템 폰트 — Poppins / Libre Baskerville 은 한글을 못 그린다 */
 .kr{font-family:"Apple SD Gothic Neo","Malgun Gothic","Segoe UI",sans-serif}
 
-.wrap{max-width:640px;margin:0 auto;padding:20px 18px 90px;position:relative}
+.wrap{max-width:640px;margin:0 auto;padding:20px 18px calc(90px + env(safe-area-inset-bottom));position:relative}
 
 /* ---------- top bar ---------- */
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
@@ -357,8 +357,8 @@ body{
 </nav>
 <div class="feedback" id="feedback"></div>
 
-<script type="module" src="firebase-init.js?v=1.10"></script>
+<script type="module" src="firebase-init.js?v=1.11"></script>
 <script src="vendor/html2canvas.min.js"></script>
-<script src="app.js?v=1.10"></script>
+<script src="app.js?v=1.11"></script>
 </body>
 </html>
