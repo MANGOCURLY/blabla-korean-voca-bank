@@ -2,7 +2,7 @@
    화면의 값과 커밋이 다르면 브라우저가 옛 파일을 캐시한 것이다.
    index.html 의 app.js?v= · firebase-init.js?v= 도 반드시 같은 값으로 함께 올린다.
    URL 이 바뀌어야 브라우저가 캐시를 버리고 새 파일을 받는다. */
-const APP_VERSION = 'v1.11';
+const APP_VERSION = 'v1.12';
 
 const IMG = {
   bad: "images/bad.png",
